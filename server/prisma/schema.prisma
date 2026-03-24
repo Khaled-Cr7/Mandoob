@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+}
+
+model Phone {
+  id          String   @id // Manual ID (not automatic)
+  brand       String
+  name        String
+  price       Float
+  lastUpdated DateTime @updatedAt // Automatically updates the date on changes
+}
+
+model Notification {
+  id      Int    @id @default(autoincrement())
+  message String
+}
