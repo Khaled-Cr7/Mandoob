@@ -11,6 +11,13 @@ enum Role {
   ADMIN
 }
 
+enum Brand {
+  SAMSUNG
+  HONOR
+  TECHNO
+  INFINIX
+}
+
 
 model User {
   id        Int      @id @default(autoincrement())
@@ -23,7 +30,7 @@ model User {
 
 model Phone {
   id          String   @id // Manual ID (not automatic)
-  brand       String
+  brand       Brand    @default(SAMSUNG)
   name        String
   price       Float
   lastUpdated DateTime @updatedAt // Automatically updates the date on changes

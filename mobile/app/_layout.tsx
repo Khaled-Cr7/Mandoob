@@ -3,7 +3,7 @@ import "./globals.css"
 
 export default function RootLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }} initialRouteName="(auth)/login">
+    <Stack screenOptions={{ headerShown: false }} initialRouteName="(user)">
       <Stack.Screen name="(auth)/login" />
       <Stack.Screen name="(admin)" />
       <Stack.Screen name="(user)" />  
