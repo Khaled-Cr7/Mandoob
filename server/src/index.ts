@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth'; // The file we talked about earlier
 import phoneRoutes from './routes/phones';
+import adminUserRoutes from './routes/adminUsers';
 
 const app = express();
 const PORT = 3000;
@@ -18,7 +19,9 @@ app.use('/api', authRoutes); // This makes your login live at /api/login
 
 app.use('/api/phones', phoneRoutes);
 
+app.use('/api/admin/users', adminUserRoutes);
+
 // 3. Start Server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://192.168.8.100`);
+  console.log(`🚀 Server running on Khaled's Laptop`);
 });

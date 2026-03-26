@@ -17,6 +17,39 @@ router.get('/brands', (req, res) => {
   res.json(brandList);
 });
 
+// DELETE /api/phones/:id
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+  await prisma.phone.delete({ where: { id } });
+  res.json({ message: "Phone deleted successfully" });
+});
+
+router.post('/', async (req, res) => {
+  try {
+    const { id, name, brand, price } = req.body;
+    const newPhone = await prisma.phone.create({
+      data: { id, name, brand, price, lastUpdated: new Date() }
+    });
+    res.json(newPhone);
+  } catch (error) {
+    res.status(400).json({ message: "ID already exists or invalid data" });
+  }
+});
+
+// 2. EDIT PHONE (PUT)
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, brand, price } = req.body;
+    const updated = await prisma.phone.update({
+      where: { id },
+      data: { name, brand, price, lastUpdated: new Date() }
+    });
+    res.json(updated);
+  } catch (error) {
+    res.status(400).json({ message: "Update failed" });
+  }
+});
 
 
 // GET /api/phones

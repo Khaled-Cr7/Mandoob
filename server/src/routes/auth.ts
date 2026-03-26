@@ -15,7 +15,7 @@ const router = express.Router();
 
 // 1. Create the connection pool
 const pool = new Pool({ 
-  connectionString: "postgresql://myuser:mypassword@localhost:5432/mandoob_db"
+  connectionString: process.env.DATABASE_URL
 });
 
 pool.connect((err, client, release) => {
