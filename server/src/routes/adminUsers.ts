@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
         ...(search ? {
           OR: [
             { name: { contains: String(search), mode: 'insensitive' } },
-            { email: { contains: String(search), mode: 'insensitive' } },
+            { username: { contains: String(search), mode: 'insensitive' } },
           ]
         } : {})
       },
@@ -40,18 +40,19 @@ router.get('/', async (req, res) => {
 // 2. CREATE NEW USER
 router.post('/', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, username, password, phoneNumber } = req.body;
+    const cleanUsername = username.toLowerCase().trim();
     
     // Generate avatar URL based on name
     const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fbbf24`;
 
     const newUser = await prisma.user.create({
-      data: { name, email, password, avatar, role: 'USER' }
+      data: { name, username: cleanUsername, password, avatar, phoneNumber, role: 'USER' }
     });
     
     res.json(newUser);
   } catch (error) {
-    res.status(400).json({ message: "Email already exists" });
+    res.status(400).json({ message: "Username already exists" });
   }
 });
 
@@ -59,10 +60,25 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, password } = req.body;
+    const { name, username, password, phoneNumber } = req.body;
 
-    const updatedData: any = { name, email };
-    if (password) updatedData.password = password; // Only update password if provided
+    // Create an empty object for updates
+    const updatedData: any = {};
+
+    // 1. Only add name if it exists
+    if (name) updatedData.name = name;
+
+    // 2. Only clean and add username if it's provided
+    if (username) {
+      updatedData.username = username.toLowerCase().trim();
+    }
+
+    // 3. Only update password if provided and not empty
+    if (password && password.trim() !== "") {
+      updatedData.password = password;
+    }
+
+    if (phoneNumber) updatedData.phoneNumber = phoneNumber;
 
     const updatedUser = await prisma.user.update({
       where: { id: parseInt(id) },
@@ -71,7 +87,8 @@ router.put('/:id', async (req, res) => {
     
     res.json(updatedUser);
   } catch (error) {
-    res.status(400).json({ message: "Update failed" });
+    // If the error is a duplicate username, Prisma will throw a P2002 error
+    res.status(400).json({ message: "Update failed. Username might be taken." });
   }
 });
 

@@ -20,13 +20,14 @@ enum Brand {
 
 
 model User {
-  id          Int      @id @default(autoincrement())
-  name        String
-  email       String   @unique
-  password    String
-  role        Role     @default(USER)
-  avatar      String   @default("https://ui-avatars.com/api/?name=User&background=random")
-  createdAt   DateTime @default(now())
+  id            Int       @id @default(autoincrement())
+  name          String
+  username      String    @unique
+  password      String    
+  phoneNumber   String    @default("0000000000")
+  role          Role      @default(USER)
+  avatar        String    @default("https://ui-avatars.com/api/?name=User&background=random")
+  createdAt     DateTime  @default(now())
 }
 
 model Phone {

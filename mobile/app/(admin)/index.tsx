@@ -330,7 +330,7 @@ export default function AdminPhoneManagement() {
                 onPress={() => setIsModalVisible(false)} 
                 className="flex-1 bg-slate-800 h-16 rounded-[24px] justify-center items-center"
               >
-                <Text className="text-slate-400 font-black text-xs tracking-widest uppercase">Discard</Text>
+                <Text className="text-slate-400 font-black text-xs  uppercase flex-shrink: 0">Discard{" "}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 

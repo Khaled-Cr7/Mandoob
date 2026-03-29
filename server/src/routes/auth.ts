@@ -33,13 +33,13 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  console.log("🚀 Login attempt received:", email);
+  const { username, password } = req.body;
+  console.log("🚀 Login attempt received:", username);
 
   try {
     // 1. Find user by email
     const user = await prisma.user.findUnique({
-      where: { email: email },
+      where: { username: username },
     });
 
     // 2. Check if user exists

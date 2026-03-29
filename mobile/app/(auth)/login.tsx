@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
 
@@ -14,7 +14,7 @@ export default function LoginScreen() {
       const response = await fetch('http://192.168.8.100:3000/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await response.json();
@@ -41,12 +41,12 @@ export default function LoginScreen() {
       <View className="space-y-4">
         {/* Email Slot */}
         <View>
-          <Text className="text-slate-600 mb-1 ml-1 font-medium">Email</Text>
+          <Text className="text-slate-600 mb-1 ml-1 font-medium">Username</Text>
           <TextInput 
             className="..."
             placeholder="example@company.com"
-            value={email} // Add this
-            onChangeText={setEmail} // Add this
+            value={username} // Add this
+            onChangeText={setUsername} // Add this
             autoCapitalize="none" // Recommended for emails
           />
         </View>

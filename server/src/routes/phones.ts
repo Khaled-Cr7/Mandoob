@@ -56,15 +56,13 @@ router.put('/:id', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { brands, sort, search } = req.query;
-    
-    // Clean the search string (remove accidental spaces)
     const cleanSearch = search ? String(search).trim() : "";
 
-    let whereClause: any = { AND: [] }; // Use AND to combine Brand + Search
+    let AND_filters: any[] = [];
 
     // 1. Search Logic
     if (cleanSearch) {
-      whereClause.AND.push({
+      AND_filters.push({
         OR: [
           { name: { contains: cleanSearch, mode: 'insensitive' } },
           { id: { contains: cleanSearch, mode: 'insensitive' } }
@@ -72,25 +70,29 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // 2. Brand Logic
-    if (brands && brands !== 'ALL') {
-      const brandArray = String(brands).split(',');
-      whereClause.AND.push({
-        brand: { in: brandArray as any }
-      });
+    // 2. Brand Logic - Strict Validation
+    if (brands && brands !== 'ALL' && brands !== '') {
+      const brandArray = String(brands).split(',').filter(b => b.length > 0);
+      
+      if (brandArray.length > 0) {
+        AND_filters.push({
+          brand: { in: brandArray as any }
+        });
+      }
     }
 
     const orderBy = sort === 'OLD' ? 'asc' : 'desc';
 
     const phones = await prisma.phone.findMany({
-      where: whereClause.AND.length > 0 ? whereClause : {}, // Only apply if filters exist
+      // FIXED: Only use 'where' if there are actual filters
+      where: AND_filters.length > 0 ? { AND: AND_filters } : {}, 
       orderBy: { lastUpdated: orderBy },
     });
 
     res.json(phones);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error" });
+    console.error("❌ Prisma Query Failed:", error);
+    res.status(500).json([]); // Return empty array instead of error object to prevent frontend crash
   }
 });
 
