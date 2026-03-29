@@ -25,7 +25,7 @@ export default function UserLayout() {
       <Tabs.Screen 
         name="index" 
         options={{ 
-          title: 'INVENTORY',
+          title: 'DEVICES',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "phone-portrait" : "phone-portrait-outline"} size={22} color={color} />
           )

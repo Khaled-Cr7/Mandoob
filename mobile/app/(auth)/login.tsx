@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { API_URL } from '../../constants';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
@@ -11,7 +12,7 @@ export default function LoginScreen() {
     try {
       // Use your laptop's IP address if testing on a real phone, 
       // or 10.0.2.2 for Android Emulator, or localhost for iOS Simulator
-      const response = await fetch('http://192.168.8.100:3000/api/login', {
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -44,10 +45,9 @@ export default function LoginScreen() {
           <Text className="text-slate-600 mb-1 ml-1 font-medium">Username</Text>
           <TextInput 
             className="..."
-            placeholder="example@company.com"
+            placeholder="Enter your username"
             value={username} // Add this
             onChangeText={setUsername} // Add this
-            autoCapitalize="none" // Recommended for emails
           />
         </View>
 

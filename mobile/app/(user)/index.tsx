@@ -11,9 +11,6 @@ export default function UserInventoryScreen() {
 
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
 
-  const toggleSort = () => {
-    setSortOrder(prev => prev === 'NEW' ? 'OLD' : 'NEW');
-  };
 
   useEffect(() => {
   const fetchBrands = async () => {
@@ -86,7 +83,7 @@ export default function UserInventoryScreen() {
       <View className="pt-14 px-6 pb-6 bg-white border-b border-slate-100">
         <View className="flex-row justify-between items-center mb-6">
           <View>
-            <Text className="text-blue-600 text-[10px] font-black uppercase tracking-[3px]">Stock Terminal</Text>
+            <Text className="text-blue-600 text-[10px] font-black uppercase tracking-[3px]">Kunooz Albaraka</Text>
             <Text className="text-3xl font-black text-slate-900 tracking-tighter">Inventory</Text>
           </View>
           <TouchableOpacity className="p-3 bg-slate-100 rounded-2xl">
@@ -95,7 +92,7 @@ export default function UserInventoryScreen() {
           </TouchableOpacity>
         </View>
         
-        {/* Search Bar - Matching Admin Depth */}
+        {/* Search Bar */}
         <View className="flex-row items-center bg-slate-100 rounded-2xl px-4 h-14 border border-slate-200 shadow-inner">
           <Ionicons name="search" size={20} color="#94a3b8" />
           <TextInput 
@@ -113,38 +110,35 @@ export default function UserInventoryScreen() {
         </View>
       </View>
 
+
       {/* --- BRAND FILTERS --- */}
-      <View className="py-4">
-        <View className="flex-row justify-between items-center px-6 mb-3">
+      <View>
+        <View className="flex-row justify-between items-center px-6 mb-3 mt-4">
           <Text className="text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Filter Brands</Text>
           <TouchableOpacity 
-            onPress={() => setSortOrder(prev => prev === 'NEW' ? 'OLD' : 'NEW')} 
-            className="flex-row items-center bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100"
+            onPress={() => setSortOrder(prev => prev === 'NEW' ? 'OLD' : 'NEW')}
+            className="flex-row items-center bg-blue-50 px-4 py-2 rounded-xl border border-blue-100"
           >
-            <Ionicons name="swap-vertical" size={12} color="#2563eb" />
+            <Ionicons name="swap-vertical" size={13} color="#2563eb" />
             <Text className="text-blue-600 font-black ml-1.5 text-[10px] uppercase">
-              {sortOrder === 'NEW' ? 'Recent' : 'Oldest'}
+              {sortOrder === 'NEW' ? 'Most Recent ' : 'Oldest '}
             </Text>
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-6">
-          <TouchableOpacity 
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24 }}>
+          <TouchableOpacity
             onPress={() => toggleBrand('ALL')}
-            className={`px-6 h-10 rounded-xl justify-center mr-2 border ${selectedBrands.includes('ALL') ? 'bg-blue-600 border-blue-600 shadow-md' : 'bg-white border-slate-200'}`}
+            className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.includes('ALL') ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-slate-200'}`}
           >
-            <Text className={`font-black text-[10px] uppercase tracking-widest ${selectedBrands.includes('ALL') ? 'text-white' : 'text-slate-500'}`}>All Stock</Text>
+            <Text className={`font-black text-[11px] ${selectedBrands.includes('ALL') ? 'text-white' : 'text-slate-500'}`}>ALL</Text>
           </TouchableOpacity>
-
-          {/* FIX: Add the Array.isArray check here to prevent the map crash */}
-          {Array.isArray(availableBrands) && availableBrands.map((brand, index) => (
-            <TouchableOpacity 
-              key={`${brand}-${index}`} 
+          {availableBrands.map((brand) => (
+            <TouchableOpacity
+              key={brand}
               onPress={() => toggleBrand(brand)}
-              className={`px-6 h-10 rounded-xl justify-center mr-2 border ${selectedBrands.includes(brand) ? 'bg-blue-600 border-blue-600 shadow-md' : 'bg-white border-slate-200'}`}
+              className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.includes(brand) ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-slate-200'}`}
             >
-              <Text className={`font-black text-[10px] uppercase tracking-widest ${selectedBrands.includes(brand) ? 'text-white' : 'text-slate-500'}`}>
-                {brand}
-              </Text>
+              <Text className={`font-black text-[11px] ${selectedBrands.includes(brand) ? 'text-white' : 'text-slate-500'}`}>{brand}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -153,9 +147,9 @@ export default function UserInventoryScreen() {
       {/* --- DATA LIST --- */}
       <FlatList
         data={phones} 
-        className="px-4"
-        contentContainerStyle={{ paddingBottom: 100 }} // Added extra space for the tabs
-        keyExtractor={({item}: {item: any}, index) => item?.id ? item.id.toString() : index.toString()}
+        className="px-4 py-4"
+        contentContainerStyle={{ paddingBottom: 120 }}
+        keyExtractor={(item: any, index) => item?.id ? item.id.toString() : index.toString()}
         ListEmptyComponent={
           loading ? (
             <View className="py-20 items-center justify-center">
@@ -166,12 +160,12 @@ export default function UserInventoryScreen() {
             <View className="flex-1 py-20 items-center justify-center px-10">
               <Ionicons name="phone-portrait-outline" size={48} color="#cbd5e1" />
               <Text className="text-slate-400 font-black mt-4 text-center text-[10px] uppercase tracking-widest">
-                No stock found matching "{search}"
+                No Device found matching "{search}"
               </Text>
             </View>
           )
         }
-        renderItem={({ item } : any) => (
+        renderItem={({ item }: any) => (
           <View className="mb-3 p-5 bg-white rounded-[32px] border border-slate-100 shadow-sm flex-row justify-between items-center">
             <View className="flex-1 pr-4">
               <Text className="text-[9px] font-black text-blue-500 mb-1 tracking-widest uppercase">REF: {item.id}</Text>
@@ -183,8 +177,7 @@ export default function UserInventoryScreen() {
               </View>
             </View>
 
-            <View className="items-end bg-blue-50 p-4 rounded-3xl">
-              <Text className="text-[10px] font-black text-blue-400 uppercase mb-1">Price</Text>
+            <View className="bg-blue-50 p-4 rounded-3xl">
               <View className="flex-row items-baseline">
                 <Text className="text-xl font-black text-blue-700">{item.price}</Text>
                 <Text className="text-[8px] font-black text-blue-400 ml-1">SAR</Text>
