@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Brand {
+  SAMSUNG
+  HONOR
+  TECHNO
+  INFINIX
+}
+
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String
+  username      String    @unique
+  password      String    
+  phoneNumber   String    @default("0000000000")
+  role          Role      @default(USER)
+  avatar        String    @default("https://ui-avatars.com/api/?name=User&background=random")
+  createdAt     DateTime  @default(now())
+}
+
+model Phone {
+  id          String   @id // Manual ID (not automatic)
+  brand       Brand    @default(SAMSUNG)
+  name        String
+  price       Float
+  lastUpdated DateTime @updatedAt // Automatically updates the date on changes
+}
+
+model Notification {
+  id      Int    @id @default(autoincrement())
+  message String
+}
