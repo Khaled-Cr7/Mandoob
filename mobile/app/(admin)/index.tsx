@@ -3,19 +3,27 @@ import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, Activity
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { useFocusEffect } from 'expo-router';
+import { I18nManager } from 'react-native';
+import * as Updates from 'expo-updates';
+import { useTranslation } from 'react-i18next';
+import { RefreshControl } from 'react-native';
 
 export default function AdminPhoneManagement() {
+  const { t } = useTranslation();
   const [phones, setPhones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedBrands, setSelectedBrands] = useState<string[]>(['ALL']);
   const [sortOrder, setSortOrder] = useState<'NEW' | 'OLD'>('NEW');
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   // --- NEW: FORM & MODAL STATES ---
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ id: '', name: '', brand: '', price: '' });
+
+  
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -28,6 +36,12 @@ export default function AdminPhoneManagement() {
       }
     };
     fetchBrands();
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchPhones();
+    setRefreshing(false);
   }, []);
 
   const fetchPhones = async () => {
@@ -51,7 +65,7 @@ export default function AdminPhoneManagement() {
 
   useFocusEffect(
     useCallback(() => {
-      setSearch(''); // Reset search when tab is focused
+      setSearch(''); // Your existing search reset
     }, [])
   );
 
@@ -75,7 +89,7 @@ export default function AdminPhoneManagement() {
 
   const handleSave = async () => {
     if (!formData.id || !formData.name || !formData.price) {
-      Alert.alert("Missing Data", "Please complete all system fields.");
+      Alert.alert(t('missing_data'), t('missing_data_msg'));
       return;
     }
 
@@ -94,10 +108,10 @@ export default function AdminPhoneManagement() {
         fetchPhones();
       } else {
         const err = await response.json();
-        Alert.alert("System Error", err.message || "Action failed.");
+        Alert.alert(t('system_error'), err.message || t('action_failed'));
       }
     } catch (e) {
-      Alert.alert("Connection Error", "Could not reach database server.");
+      Alert.alert(t('connection_error'), t('db_reach_error'));
     }
   };
 
@@ -117,17 +131,17 @@ export default function AdminPhoneManagement() {
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert("🚨 System Delete", `Confirm removal of Item: ${id}?`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t('system_delete'), `${t('confirm_removal')}: ${id}?`, [
+      { text: t('cancel'), style: "cancel" },
       { 
-        text: "Delete", 
+        text: t('delete'), 
         style: "destructive", 
         onPress: async () => {
           try {
             await fetch(`${API_URL}/phones/${id}`, { method: 'DELETE' });
             fetchPhones();
           } catch (e) {
-            Alert.alert("Error", "Server rejected deletion.");
+            Alert.alert(t('error'), t('server_rejected'));
           }
         } 
       }
@@ -141,8 +155,8 @@ export default function AdminPhoneManagement() {
       <View className="pt-14 px-6 pb-8 bg-slate-900">
         <View className="flex-row justify-between items-center mb-6">
           <View>
-            <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">System Admin</Text>
-            <Text className="text-3xl font-black text-white tracking-tighter">Inventory</Text>
+            <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">{t('system_admin')}</Text>
+            <Text className="text-3xl font-black text-white tracking-tighter">{t('inventory')}</Text>
           </View>
         </View>
         
@@ -150,7 +164,7 @@ export default function AdminPhoneManagement() {
         <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-14 mb-6 border border-slate-700 shadow-inner">
           <Ionicons name="search" size={20} color="#64748b" />
           <TextInput 
-            placeholder="Search..." 
+            placeholder={t('search_dot')} 
             placeholderTextColor="#475569"
             className="flex-1 ml-3 text-white font-bold"
             value={search}
@@ -165,7 +179,7 @@ export default function AdminPhoneManagement() {
 
         {/* Brand Scrollbox */}
         <View>
-          <Text className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Filter Source</Text>
+          <Text className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">{t('filter_source')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <TouchableOpacity 
               onPress={() => toggleBrand('ALL')}
@@ -189,10 +203,10 @@ export default function AdminPhoneManagement() {
       {/* --- THE MAIN DATA TERMINAL --- */}
       <View className="flex-1 bg-slate-50 rounded-t-[45px] shadow-2xl border-t border-slate-200">
         <View className="flex-row justify-between items-center px-8 py-6">
-          <Text className="text-xs font-black text-slate-400 uppercase tracking-[2px]">Active Records</Text>
+          <Text className="text-xs font-black text-slate-400 uppercase tracking-[2px]">{t('active_records')}</Text>
           <TouchableOpacity onPress={() => setSortOrder(sortOrder === 'NEW' ? 'OLD' : 'NEW')} className="flex-row items-center bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
             <Text className="text-slate-600 font-bold text-[9px] uppercase tracking-tighter mr-2">
-              {sortOrder === 'NEW' ? 'Latest' : 'Oldest'}
+              {sortOrder === 'NEW' ? t('latest') : t('oldest')}
             </Text>
             <Ionicons name="chevron-down" size={12} color="#64748b" />
           </TouchableOpacity>
@@ -201,10 +215,13 @@ export default function AdminPhoneManagement() {
         <FlatList
           data={phones}
           contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          }
           renderItem={({ item } : any) => (
             <View className="mx-6 mb-3 p-5 bg-white rounded-[28px] border border-slate-100 shadow-sm flex-row justify-between items-center">
               <View className="flex-1">
-                <Text className="text-[10px] font-black text-amber-600 mb-1 tracking-tighter">REF: {item.id}</Text>
+                <Text className="text-[10px] font-black text-amber-600 mb-1 tracking-tighter">{t('ref')}: {item.id}</Text>
                 <Text className="text-lg font-black text-slate-900 leading-5 mb-2" numberOfLines={1}>{item.name}</Text>
                 
                 <View className="flex-row">
@@ -217,7 +234,7 @@ export default function AdminPhoneManagement() {
               <View className="items-end ml-4">
                 <View className="flex-row items-baseline">
                   <Text className="text-xl font-black text-slate-900">{item.price}</Text>
-                  <Text className="text-[10px] font-bold text-slate-400 ml-1">SAR</Text>
+                  <Text className="text-[10px] font-bold text-slate-400 ml-1">{t('currency')}</Text>
                 </View>
                 <View className="flex-row mt-3 space-x-1">
                   <TouchableOpacity 
@@ -237,7 +254,7 @@ export default function AdminPhoneManagement() {
             loading ? <ActivityIndicator size="large" color="#0f172a" className="mt-20" /> : 
             <View className="items-center mt-20 px-10">
                <Ionicons name="file-tray-outline" size={40} color="#cbd5e1" />
-               <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">No Device found matching "{search}"</Text>
+               <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">{t('no_results')} "{search}"</Text>
             </View>
           }
         />
@@ -252,7 +269,11 @@ export default function AdminPhoneManagement() {
             <View className="bg-amber-500 rounded-full p-1 mr-3">
               <Ionicons name="add" size={20} color="#0f172a" />
             </View>
-            <Text className="text-white font-black text-base tracking-tight uppercase">Enroll New Device</Text>
+            <Text
+            numberOfLines={1} 
+            adjustsFontSizeToFit 
+            minimumFontScale={0.8} 
+            className="text-white font-black text-base tracking-tight uppercase">{t('enroll_new_device')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -267,18 +288,18 @@ export default function AdminPhoneManagement() {
             <View className="w-12 h-1 bg-slate-700 rounded-full self-center mb-6" />
             
             <Text className="text-amber-500 font-black text-[10px] uppercase tracking-[3px] mb-2">
-                {isEditing ? 'System Update' : 'New Entry'}
+                {isEditing ? t('system_update') : t('new_entry')}
             </Text>
             <Text className="text-3xl font-black text-white mb-8 tracking-tighter">
-                {isEditing ? 'Edit Specs' : 'Register Device'}
+                {isEditing ? t('edit_specs') : t('register_device')}
             </Text>
 
             <View className="gap-y-4">
               <View>
-                <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">Device Reference ID</Text>
+                <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('device_ref_id')}</Text>
                 <TextInput 
                   editable={!isEditing} 
-                  placeholder="ID (e.g. S1)" 
+                  placeholder={t('device_id_placeholder')} 
                   placeholderTextColor="#475569" 
                   value={formData.id} 
                   onChangeText={(t) => setFormData({...formData, id: t})} 
@@ -287,9 +308,9 @@ export default function AdminPhoneManagement() {
               </View>
 
               <View>
-                <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">Model Designation</Text>
+                <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('model_designation')}</Text>
                 <TextInput 
-                  placeholder="Model Name" 
+                  placeholder={t('model_name_placeholder')} 
                   placeholderTextColor="#475569" 
                   value={formData.name} 
                   onChangeText={(t) => setFormData({...formData, name: t})} 
@@ -298,7 +319,7 @@ export default function AdminPhoneManagement() {
               </View>
               
               <View>
-                <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">Manufacturer</Text>
+                <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('manufacturer')}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-1">
                     {availableBrands.map(b => (
                     <TouchableOpacity 
@@ -313,9 +334,9 @@ export default function AdminPhoneManagement() {
               </View>
 
               <View>
-                <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">Valuation (SAR)</Text>
+                <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('valuation_sar')}</Text>
                 <TextInput 
-                  placeholder="Price" 
+                  placeholder={t('price')} 
                   keyboardType="numeric" 
                   placeholderTextColor="#475569" 
                   value={formData.price} 
@@ -330,7 +351,7 @@ export default function AdminPhoneManagement() {
                 onPress={() => setIsModalVisible(false)} 
                 className="flex-1 bg-slate-800 h-16 rounded-[24px] justify-center items-center"
               >
-                <Text className="text-slate-400 font-black text-xs  uppercase flex-shrink: 0">Discard{" "}</Text>
+                <Text className="text-slate-400 font-black text-xs  uppercase flex-shrink: 0">{t('discard')}</Text> 
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -338,7 +359,7 @@ export default function AdminPhoneManagement() {
                 className="flex-[2] bg-amber-500 h-16 rounded-[24px] justify-center items-center shadow-lg shadow-amber-500/20"
               >
                 <Text className="text-slate-900 font-black text-xs tracking-widest uppercase">
-                    {isEditing ? 'Apply Changes' : 'Confirm Enrollment'}
+                    {isEditing ? t('apply_changes') : t('confirm_enrollment')}
                 </Text>
               </TouchableOpacity>
             </View>

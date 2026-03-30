@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { API_URL } from '../../constants';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
@@ -25,27 +27,30 @@ export default function LoginScreen() {
         if (data.role === 'ADMIN') {
           router.replace('/(admin)');
         } else {
-          router.replace('/(user)');
+          router.replace({
+            pathname: '/(user)',
+            params: { userId: data.id }
+          });
         }
       } else {
-        Alert.alert("Login Failed", data.message);
+        Alert.alert(t('login_failed'),t('login_failed_msg'));
       }
     } catch (error) {
-      Alert.alert("Error", "Could not connect to server");
+      Alert.alert(t('login_failed'), t('login_failed_msg'));
     }
   };
 
   return (
     <View className="flex-1 bg-white px-8 justify-center">
-      <Text className="text-4xl font-extrabold text-slate-900 mb-8">Sign In</Text>
+      <Text className="text-4xl font-extrabold text-slate-900 mb-8">{t('sign_in')}</Text>
       
       <View className="space-y-4">
         {/* Email Slot */}
         <View>
-          <Text className="text-slate-600 mb-1 ml-1 font-medium">Username</Text>
+          <Text className="text-slate-600 mb-1 ml-1 font-medium">{t('username')}</Text>
           <TextInput 
             className="..."
-            placeholder="Enter your username"
+            placeholder={t('Enter_your_username')}
             value={username} // Add this
             onChangeText={setUsername} // Add this
           />
@@ -53,7 +58,7 @@ export default function LoginScreen() {
 
         {/* Password Slot */}
         <View className="mt-4">
-          <Text className="text-slate-600 mb-1 ml-1 font-medium">Password</Text>
+          <Text className="text-slate-600 mb-1 ml-1 font-medium">{t('password')}</Text>
           <TextInput 
             className="..."
             placeholder="••••••••"
@@ -65,7 +70,7 @@ export default function LoginScreen() {
 
         {/* Login Button */}
         <TouchableOpacity onPress={handleLogin} className="bg-blue-600 h-14 rounded-xl items-center justify-center mt-8">
-          <Text className="text-white text-lg font-bold">Login</Text>
+          <Text className="text-white text-lg font-bold">{t('login')}</Text>
         </TouchableOpacity>
       </View>
     </View>

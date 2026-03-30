@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 export default function AdminLayout() {
+  const {t} = useTranslation();  
   return (
     <Tabs screenOptions={{ 
       headerShown: false,
@@ -25,7 +27,7 @@ export default function AdminLayout() {
       <Tabs.Screen 
         name="index" 
         options={{ 
-          title: 'DEVICES',
+          title: t('devices'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "cube" : "cube-outline"} size={22} color={color} />
           )
@@ -34,7 +36,7 @@ export default function AdminLayout() {
       <Tabs.Screen 
         name="users" 
         options={{ 
-          title: 'PERSONNEL',
+          title: t('user'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "people" : "people-outline"} size={22} color={color} />
           )

@@ -1,7 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 export default function UserLayout() {
+
+  const { t } = useTranslation();
+  
   return (
     <Tabs screenOptions={{ 
       headerShown: false,
@@ -25,7 +29,7 @@ export default function UserLayout() {
       <Tabs.Screen 
         name="index" 
         options={{ 
-          title: 'DEVICES',
+          title: t('devices'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "phone-portrait" : "phone-portrait-outline"} size={22} color={color} />
           )
@@ -34,7 +38,7 @@ export default function UserLayout() {
       <Tabs.Screen 
         name="profile" 
         options={{ 
-          title: 'MY PROFILE',
+          title: t('my_profile'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "person-circle" : "person-circle-outline"} size={22} color={color} />
           )

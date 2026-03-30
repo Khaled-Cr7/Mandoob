@@ -4,8 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { useFocusEffect } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import { useTranslation } from 'react-i18next';
+import { RefreshControl } from 'react-native';
 
 export default function PersonnelManagement() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -17,6 +20,14 @@ export default function PersonnelManagement() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [copiedUser, setCopiedUser] = useState(false);
   const [copiedPass, setCopiedPass] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+
+  const onRefresh = useCallback(async () => {
+      setRefreshing(true);
+      await fetchUsers();
+      setRefreshing(false);
+    }, []);
 
 
   const handleCopy = async (text: string, type: 'user' | 'pass') => {
@@ -65,7 +76,7 @@ export default function PersonnelManagement() {
     
     // 1. Basic Info Check
     if (!name.trim() || !username.trim()) {
-      Alert.alert("Missing Info", "Please enter a Name and Username.");
+      Alert.alert(t('missing_data'), t('enter_name'));
       return false;
     }
 
@@ -73,33 +84,33 @@ export default function PersonnelManagement() {
     if (!isEditing || (isEditing && password.length > 0)) {
       const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
       if (!passRegex.test(password)) {
-        Alert.alert("Weak Password", "Must be 8+ chars with Upper, Lower, Number, and a Special Character.");
+        Alert.alert(t('weak_password'), t('weak_password_msg'));
         return false;
       }
     }
 
     // 3. Phone Number Check
     if (!phoneNumber) {
-      Alert.alert("Required", "Please enter a Phone Number.");
+      Alert.alert(t('required'), t('enter_phone'));
       return false;
     }
 
     const isNumeric = /^\d+$/.test(phoneNumber);
 
     if (!isNumeric) {
-      Alert.alert("Invalid Input", "Phone number must contain only digits (0-9).");
+      Alert.alert(t('invalid_input'), t('digits_only'));
       return false;
     }
 
     // Check Length (10 digits)
     if (phoneNumber.length !== 10) {
-      Alert.alert("Invalid Length", "Phone number must be exactly 10 digits.");
+      Alert.alert(t('invalid_length'), t('ten_digits_only'));
       return false;
     }
 
     // Check Prefix (Starts with 05)
     if (!phoneNumber.startsWith("05")) {
-      Alert.alert("Invalid Format", "Phone number must start with '05'.");
+      Alert.alert(t('invalid_format'), t('start_with_05'));
       return false;
     }
 
@@ -149,17 +160,17 @@ export default function PersonnelManagement() {
         fetchUsers();
       } else {
         const errorData = await res.json();
-        Alert.alert("System Error", errorData.message || "Failed to save user.");
+        Alert.alert(t('system_error'), errorData.message || t('action_failed'));
       }
     } catch (e) { 
-      Alert.alert("Network Error", "Check your server connection.");
+      Alert.alert(t('connection_error'), t('db_reach_error'));
     }
   };
 
   const handleDelete = (id: number, name: string) => {
-    Alert.alert("🚨 Revoke Access", `Are you sure you want to delete ${name}?`, [
-      { text: "Cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
+    Alert.alert(t('revoke_access'), `${t('confirm_user_delete')} ${name}?`, [
+      { text: t('cancel') },
+      { text: t('delete'), style: "destructive", onPress: async () => {
           await fetch(`${API_URL}/admin/users/${id}`, { method: 'DELETE' });
           fetchUsers();
       }}
@@ -187,14 +198,14 @@ export default function PersonnelManagement() {
       
       {/* --- CONSOLE HEADER --- */}
       <View className="pt-14 px-6 pb-8 bg-slate-900">
-        <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">System Admin</Text>
-        <Text className="text-3xl font-black text-white tracking-tighter mb-6">Personnel</Text>
+        <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">{t('system_admin')}</Text>
+        <Text className="text-3xl font-black text-white tracking-tighter mb-6">{t('personnel')}</Text>
         
         {/* Search Bar */}
         <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-14 mb-6 border border-slate-700 shadow-inner">
           <Ionicons name="search" size={20} color="#64748b" />
           <TextInput 
-            placeholder="Search..." 
+            placeholder={t('search_dot')} 
             placeholderTextColor="#475569"
             className="flex-1 ml-3 text-white font-bold"
             value={search}
@@ -211,13 +222,16 @@ export default function PersonnelManagement() {
       {/* --- STAFF DATA TERMINAL --- */}
       <View className="flex-1 bg-slate-50 rounded-t-[45px] shadow-2xl border-t border-slate-200">
         <View className="px-8 py-6">
-          <Text className="text-xs font-black text-slate-400 uppercase tracking-[2px]">Active Personnel</Text>
+          <Text className="text-xs font-black text-slate-400 uppercase tracking-[2px]">{t('active_personnel')}</Text>
         </View>
         
         
         <FlatList
           data={users}
           contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          }
           renderItem={({ item }: any) => (
             // WRAP IN TOUCHABLE TO OPEN VIEW BOX
             <TouchableOpacity 
@@ -250,13 +264,13 @@ export default function PersonnelManagement() {
             loading ? (
               <View className="items-center mt-20">
                 <ActivityIndicator size="large" color="#0f172a" />
-                <Text className="text-slate-400 font-black mt-4 uppercase text-[10px]">Accessing Database...</Text>
+                <Text className="text-slate-400 font-black mt-4 uppercase text-[10px]">{t('accessing_db')}</Text>
               </View>
             ) : (
               <View className="items-center mt-20 px-10">
                 <Ionicons name="person-remove-outline" size={40} color="#cbd5e1" />
                 <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
-                  No personnel found matching "{search}"
+                  {t('no_personnel_matching')} "{search}"
                 </Text>
               </View>
             )
@@ -284,7 +298,7 @@ export default function PersonnelManagement() {
                   
                   {/* Username Row */}
                   <View className="mb-6">
-                    <Text className="text-[9px] font-black text-slate-400 uppercase mb-2">Username</Text>
+                    <Text className="text-[9px] font-black text-slate-400 uppercase mb-2">{t('username')}</Text>
                     <View className="flex-row justify-between items-center">
                       <Text className="text-slate-900 font-bold text-sm">@{selectedUser?.username}</Text>
                       <TouchableOpacity 
@@ -292,7 +306,7 @@ export default function PersonnelManagement() {
                         className={`flex-row items-center px-2 py-1 rounded-lg ${copiedUser ? 'bg-green-100' : 'bg-slate-100'}`}
                       >
                         <Text className={`text-[9px] font-black mr-1 ${copiedUser ? 'text-green-600' : 'text-slate-400'}`}>
-                          {copiedUser ? 'COPIED' : 'COPY'}
+                          {copiedUser ? t('copied') : t('copy')}
                         </Text>
                         <Ionicons name={copiedUser ? "checkmark-circle" : "copy-outline"} size={14} color={copiedUser ? "#16a34a" : "#94a3b8"} />
                       </TouchableOpacity>
@@ -301,7 +315,7 @@ export default function PersonnelManagement() {
 
                   {/* Password Row (Real Password) */}
                   <View>
-                    <Text className="text-[9px] font-black text-slate-400 uppercase mb-2">Password</Text>
+                    <Text className="text-[9px] font-black text-slate-400 uppercase mb-2">{t('password')}</Text>
                     <View className="flex-row justify-between items-center">
                       <Text className="text-slate-900 font-bold text-sm" numberOfLines={1}>{selectedUser?.password}</Text>
                       <TouchableOpacity 
@@ -309,7 +323,7 @@ export default function PersonnelManagement() {
                         className={`flex-row items-center px-2 py-1 rounded-lg ${copiedPass ? 'bg-green-100' : 'bg-slate-100'}`}
                       >
                         <Text className={`text-[9px] font-black mr-1 ${copiedPass ? 'text-green-600' : 'text-slate-400'}`}>
-                          {copiedPass ? 'COPIED' : 'COPY'}
+                          {copiedPass ? t('copied') : t('copy')}
                         </Text>
                         <Ionicons name={copiedPass ? "checkmark-circle" : "copy-outline"} size={14} color={copiedPass ? "#16a34a" : "#94a3b8"} />
                       </TouchableOpacity>
@@ -320,7 +334,7 @@ export default function PersonnelManagement() {
 
               {/* Bottom Close Button */}
               <TouchableOpacity onPress={() => setViewModalVisible(false)} className="bg-slate-900 h-14 justify-center items-center">
-                <Text className="text-white font-black text-xs uppercase tracking-widest">Close Console</Text>
+                <Text className="text-white font-black text-xs uppercase tracking-widest">{t('close_console')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -335,7 +349,11 @@ export default function PersonnelManagement() {
             <View className="bg-amber-500 rounded-full p-1 mr-3">
               <Ionicons name="person-add" size={18} color="#0f172a" />
             </View>
-            <Text className="text-white font-black text-base tracking-tight uppercase">Add New Personnel</Text>
+            <Text 
+            numberOfLines={1} 
+            adjustsFontSizeToFit 
+            minimumFontScale={0.8}              
+            className="text-white font-black text-base tracking-tight uppercase">{t('add_personnel')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -347,18 +365,18 @@ export default function PersonnelManagement() {
               <View className="w-12 h-1 bg-slate-700 rounded-full self-center mb-6" />
               
               <Text className="text-amber-500 font-black text-[10px] uppercase tracking-[3px] mb-2">
-                {isEditing ? 'Access Level: Edit' : 'Access Level: Create'}
+                {isEditing ? t('access_level_edit') : t('access_level_create')}
               </Text>
               <Text className="text-3xl font-black text-white mb-8 tracking-tighter">
-                {isEditing ? 'Modify Profile' : 'New User Enrollment'}
+                {isEditing ? t('modify_profile') : t('new_user_enrollment')}
               </Text>
 
               <View className="gap-y-4">
                 {/* Full Name */}
                 <View>
-                  <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">Full Name</Text>
+                  <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('full_name')}</Text>
                   <TextInput 
-                    placeholder="Enter Name" placeholderTextColor="#475569" 
+                    placeholder={t('enter_name')} placeholderTextColor="#475569" 
                     value={formData.name} onChangeText={(t) => setFormData({...formData, name: t})}
                     className="bg-slate-800 text-white p-4 rounded-2xl border border-slate-700 font-bold" 
                   />
@@ -366,10 +384,10 @@ export default function PersonnelManagement() {
 
                 {/* Username */}
                 <View>
-                  <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">Username</Text>
+                  <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('username')}</Text>
                   <View className="flex-row items-center bg-slate-800 rounded-2xl border border-slate-700 pr-2">
                     <TextInput 
-                      placeholder="Enter Unique Username" placeholderTextColor="#475569" 
+                      placeholder={t('enter_unique_username')} placeholderTextColor="#475569" 
                       autoCapitalize="none" value={formData.username}
                       onChangeText={(t) => setFormData({...formData, username: t})}
                       className="flex-1 text-white p-4 font-bold" 
@@ -379,7 +397,7 @@ export default function PersonnelManagement() {
 
                 {/* Password + Eye + Shuffle */}
                 <View>
-                  <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">Password</Text>
+                  <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('password')}</Text>
                   <View className="flex-row items-center bg-slate-800 rounded-2xl border border-slate-700 pr-2">
                     <TextInput 
                       placeholder="••••••••" placeholderTextColor="#475569" 
@@ -398,7 +416,7 @@ export default function PersonnelManagement() {
 
                 {/* Phone Number */}
                 <View>
-                  <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">Phone Number</Text>
+                  <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('phone_number')}</Text>
                   <View className="flex-row items-center bg-slate-800 rounded-2xl border border-slate-700 pr-2">
                     <TextInput 
                       keyboardType="numeric" 
@@ -422,7 +440,7 @@ export default function PersonnelManagement() {
                   onPress={() => setIsModalVisible(false)} 
                   className="flex-1 flex-1 bg-slate-800 h-16 rounded-[24px] justify-center items-center"
                 >
-                  <Text className="text-slate-400 font-black text-xs uppercase flex-shrink: 0">Discard{" "}</Text>
+                  <Text className="text-slate-400 font-black text-xs uppercase flex-shrink: 0">{t('discard')}</Text>
                 </TouchableOpacity>
                 
 
@@ -432,7 +450,7 @@ export default function PersonnelManagement() {
                   className="flex-[2] bg-amber-500 h-16 rounded-[24px] justify-center items-center shadow-lg shadow-amber-500/20"
                 >
                   <Text className="text-slate-900 font-black text-xs tracking-widest uppercase">
-                    {isEditing ? 'Apply Changes' : 'Confirm Enrollment'}
+                    {isEditing ? t('apply_changes') : t('confirm_enrollment')}
                   </Text>
                 </TouchableOpacity>
               </View>
