@@ -93,5 +93,15 @@
   "revoke_access": "سحب الصلاحية",
   "confirm_user_delete": "هل أنت متأكد أنك تريد حذف",
   "add_personnel": "تسجيل مستخدم جديد",
-  "user": "المستخدمين"
+  "user": "المستخدمين",
+  "admin_management": "إدارة المدراء",
+  "active_admins": "قائمة المدراء",
+  "add_admin": "إضافة مدير جديد",
+  "special_admin": "المتحكم الرئيسي",
+  "no_admin_matching": "لم يتم العثور على مدير يطابق",
+  "access_denied": "تم رفض الوصول",
+  "username_taken": "اسم المستخدم هذا مستخدم بالفعل. يرجى اختيار اسم آخر.",
+  "no_admins_enrolled": "قاعدة بيانات المدراء فارغة حالياً",
+  "no_personnel_enrolled": "لم يتم إضافة أي مستخدمين بعد",
+  "no_inventory_found": "المخزن فارغ حالياً"
 }

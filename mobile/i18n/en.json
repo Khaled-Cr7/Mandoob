@@ -53,7 +53,7 @@
   "manufacturer": "Manufacturer",
   "valuation_sar": "Price (SAR)",
   "price": "Price",
-  "discard": "Discard",
+  "discard": "Discard ",
   "apply_changes": "Apply Changes",
   "confirm_enrollment": "Confirm Enrollment",
   "missing_data": "Missing Data",
@@ -93,5 +93,16 @@
   "revoke_access": "Revoke Access",
   "confirm_user_delete": "Are you sure you want to delete",
   "add_personnel": "Enroll New User", 
-  "user": "Users"
+  "user": "Users",
+  "admin_management": "Admin Management",
+  "active_admins": "Admins List",
+  "add_admin": "Add New Admin",
+  "special_admin": "Master Control",
+  "no_admin_matching": "No Admin found matching",
+  "access_denied": "Access Denied",
+  "username_taken": "This username is already in use. Please try another.",
+  "no_admins_enrolled": "The Admin database is currently empty",
+  "no_personnel_enrolled": "No users have been added yet",
+  "no_inventory_found": "Inventory is currently empty"
+
 }

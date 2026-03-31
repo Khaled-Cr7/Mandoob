@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform, DevSettings } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { I18nManager } from 'react-native';
 import * as Updates from 'expo-updates';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl } from 'react-native';
+import i18n from '@/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AdminPhoneManagement() {
   const { t } = useTranslation();
@@ -43,6 +45,52 @@ export default function AdminPhoneManagement() {
     await fetchPhones();
     setRefreshing(false);
   }, []);
+
+
+  const toggleLanguage = async () => {
+    const newLang = i18n.language === 'ar' ? 'en' : 'ar';
+    try {
+      await i18n.changeLanguage(newLang);
+      await AsyncStorage.setItem('user-language', newLang);
+      
+      const isArabic = newLang === 'ar';
+      I18nManager.allowRTL(isArabic);
+      I18nManager.forceRTL(isArabic);
+
+      const doRestart = async () => {
+        try {
+          await Updates.reloadAsync();
+        } catch (e) {
+          if (__DEV__) DevSettings.reload();
+          else Alert.alert("Manual Restart", "Please reopen the app to apply the layout.");
+        }
+      };
+
+      Alert.alert(
+        t('restart_required'), 
+        t('restart_msg'), 
+        [{ text: t('restart'), onPress: () => doRestart() }], 
+        { cancelable: false }
+      );
+    } catch (error) {
+      console.error("Language Error:", error);
+    }
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(t('sign_out'), t('confirm_leave'), [
+      { text: t('cancel'), style: "cancel" },
+      { 
+        text: t('sign_out'), 
+        style: "destructive", 
+        onPress: async () => {
+          await AsyncStorage.removeItem('userId'); // Clear the session!
+          router.replace('/(auth)/login'); 
+        } 
+      }
+    ]);
+  };
+
 
   const fetchPhones = async () => {
     setLoading(true);
@@ -153,10 +201,31 @@ export default function AdminPhoneManagement() {
       
       {/* --- CONSOLE HEADER --- */}
       <View className="pt-14 px-6 pb-8 bg-slate-900">
+        <View className="absolute top-14 right-6 flex-row items-center space-x-3 gap-x-1.5">
+          {/* Language Toggle */}
+          <TouchableOpacity 
+            onPress={toggleLanguage}
+            className="flex-row items-center bg-slate-800 px-3 py-2 rounded-xl border border-slate-700"
+          >
+            <Ionicons name="globe-outline" size={18} color="#fbbf24" />
+            <Text className="text-white font-black text-[10px] ml-2 uppercase">
+              {i18n.language === 'ar' ? 'English' : 'العربية'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Logout Button */}
+          <TouchableOpacity 
+            onPress={handleSignOut}
+            className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20"
+          >
+            <Ionicons name="log-out-outline" size={18} color="#ef4444" />
+          </TouchableOpacity>
+        </View>
         <View className="flex-row justify-between items-center mb-6">
           <View>
             <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">{t('system_admin')}</Text>
             <Text className="text-3xl font-black text-white tracking-tighter">{t('inventory')}</Text>
+            
           </View>
         </View>
         
@@ -253,8 +322,15 @@ export default function AdminPhoneManagement() {
           ListEmptyComponent={
             loading ? <ActivityIndicator size="large" color="#0f172a" className="mt-20" /> : 
             <View className="items-center mt-20 px-10">
-               <Ionicons name="file-tray-outline" size={40} color="#cbd5e1" />
-               <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">{t('no_results')} "{search}"</Text>
+               <Ionicons 
+                name= {search.length > 0 ? "search-outline" : "file-tray-outline"}
+                size={40} 
+                color="#cbd5e1" />
+               <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+                {search.length > 0
+                ? `${t('no_results')} "${search}"`
+                : t('no_inventory_found')}
+              </Text>
             </View>
           }
         />

@@ -16,11 +16,17 @@ const prisma = new PrismaClient({ adapter });
 // 1. GET ALL USERS
 router.get('/', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, role } = req.query;
+    
+    // 1. Decide which role to look for (default to USER if nothing sent)
+    const targetRole = (role === 'ADMIN') ? 'ADMIN' : 'USER';
+
     const users = await prisma.user.findMany({
       where: {
-        role: 'USER',
-        // We use AND to ensure role is ALWAYS USER, then filter by search if it exists
+        role: targetRole,
+        // 2. CRITICAL: Hide the Super Admin (ID 1) from the list
+        id: { not: 1 }, 
+        
         ...(search ? {
           OR: [
             { name: { contains: String(search), mode: 'insensitive' } },
@@ -33,27 +39,32 @@ router.get('/', async (req, res) => {
     res.json(users);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Failed to fetch personnel" });
+    res.status(500).json({ message: "Failed to fetch users" });
   }
 });
 
-// 2. CREATE NEW USER
 router.post('/', async (req, res) => {
   try {
-    const { name, username, password, phoneNumber } = req.body;
-    const cleanUsername = username.toLowerCase().trim();
+    const { name, username, password, phoneNumber, role } = req.body;
+    const targetRole = (role === 'ADMIN') ? 'ADMIN' : 'USER';
     
-    // Generate avatar URL based on name
-    const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fbbf24`;
+    // For Admins, you mentioned no profile pic. 
+    // We can still give them a generic one, or just a placeholder.
+    const avatar = targetRole === 'ADMIN' 
+      ? `https://ui-avatars.com/api/?name=Admin&background=475569&color=fff` 
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fbbf24`;
 
     const newUser = await prisma.user.create({
-      data: { name, username: cleanUsername, password, avatar, phoneNumber, role: 'USER' }
+      data: { name, username: username.toLowerCase().trim(), password, avatar, phoneNumber, role: targetRole }
     });
-    
-    res.json(newUser);
-  } catch (error) {
-    res.status(400).json({ message: "Username already exists" });
-  }
+
+    return res.json(newUser);
+  } catch (error : any) {
+      if (error.code === 'P2002') {
+        return res.status(400).json({ message: "Username is already taken" });
+      }
+      res.status(500).json({ message: "System Error" });
+    }
 });
 
 // 3. UPDATE USER

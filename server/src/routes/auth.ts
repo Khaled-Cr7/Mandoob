@@ -34,12 +34,12 @@ const prisma = new PrismaClient({ adapter });
 
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  console.log("🚀 Login attempt received:", username);
+  console.log("🚀 Login attempt received:", username.toLowerCase());
 
   try {
     // 1. Find user by email
     const user = await prisma.user.findUnique({
-      where: { username: username },
+      where: { username: username.toLowerCase() },
     });
 
     // 2. Check if user exists
