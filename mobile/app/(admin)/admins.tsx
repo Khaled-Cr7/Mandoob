@@ -12,7 +12,7 @@ import * as Updates from 'expo-updates';
 export default function AdminManagement() {
   const { t } = useTranslation();
   const params = useLocalSearchParams();
-  const userId = params.userId || "1"; 
+  const userId = params.userId || "11";
 
   const [hasAccess, setHasAccess] = useState(false);
   const [admins, setAdmins] = useState([]);
@@ -79,13 +79,20 @@ export default function AdminManagement() {
 
   // --- ACCESS CONTROL ---
   useEffect(() => {
-    if (userId === "1") {
+  const verifyAccess = async () => {
+    const savedId = await AsyncStorage.getItem('userId');
+    console.log("LOGGED IN ID:", savedId); // Debugging check
+
+    if (savedId === "1") {
       setHasAccess(true);
       fetchAdmins();
     } else {
       setHasAccess(false);
     }
-  }, [userId]);
+  };
+
+  verifyAccess();
+}, []);
 
   // --- FETCH LOGIC ---
   const fetchAdmins = async () => {
@@ -321,7 +328,7 @@ export default function AdminManagement() {
             className="bg-slate-900 h-16 rounded-[24px] flex-row justify-center items-center shadow-2xl"
           >
             <View className="bg-amber-500 rounded-full p-1 mr-3"><Ionicons name="shield-checkmark" size={18} color="#0f172a" /></View>
-            <Text className="text-white font-black text-base uppercase tracking-tight">{t('add_admin')}</Text>
+            <Text className="text-white font-black text-base uppercase">{t('add_admin')}</Text>
           </TouchableOpacity>
         </View>
       </View>

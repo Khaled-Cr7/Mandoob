@@ -51,6 +51,16 @@ export default function AdminLayout() {
           )
         }}
       />
+
+      <Tabs.Screen
+        name="devices-secure"
+        options={{
+          title: t('security'), // or "ACCESS"
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "hardware-chip" : "hardware-chip-outline"} size={22} color={color} />
+          )
+        }}
+      />
     </Tabs>
   );
 }

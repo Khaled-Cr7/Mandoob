@@ -33,34 +33,73 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  console.log("🚀 Login attempt received:", username.toLowerCase());
+  const { username, password, deviceId, deviceModel, brand, deviceName, pushToken } = req.body;
 
   try {
-    // 1. Find user by email
     const user = await prisma.user.findUnique({
-      where: { username: username.toLowerCase() },
+      where: { username },
     });
 
-    // 2. Check if user exists
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!user || user.password !== password) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // 3. Check password (Simple check for now)
-    if (user.password !== password) {
-      return res.status(401).json({ message: "Invalid password" });
-    }
-
-    // 4. Send back the User Data + Role
-    res.json({
-      id: user.id,
-      name: user.name,
-      role: user.role, // This is the 'ADMIN' or 'USER' string
+    // 1. Check if this device is already in our table
+    const existingDevice = await prisma.userDevice.findFirst({
+      where: { userId: user.id, deviceId: deviceId }
     });
+
+    // --- CASE 1: SUCCESS (ALREADY ACTIVE) ---
+    if (existingDevice && existingDevice.status === 'ACTIVE') {
+      return res.json({ id: user.id, role: user.role, needsOTP: false });
+    }
+
+    // --- CASE 2: DENIED ---
+    // If it's denied, just send to OTP page (the OTP page will show the "Banned" UI)
+    if (existingDevice && existingDevice.status === 'DENIED') {
+      return res.json({ id: user.id, role: user.role, needsOTP: true });
+    }
+
+    // --- CASE 3: NEW OR PENDING (NEEDS CODE) ---
+    // We use UPSERT here to either create a new record or update the existing PENDING one
+    await prisma.userDevice.upsert({
+      where: { deviceId: deviceId },
+      update: { lastUsed: new Date() }, // Don't update 'status' here!
+      create: {
+        userId: user.id,
+        deviceId,
+        deviceName,
+        deviceModel,
+        brand,
+        status: 'PENDING'
+      }
+    });
+
+    // ALWAYS generate/refresh the code for PENDING devices on login
+    const generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60000); // 5 Minutes
+
+    await prisma.validationCode.upsert({
+      where: { deviceId: deviceId }, 
+      update: { code: generatedCode, expiresAt: expiresAt, createdAt: new Date() },
+      create: {
+        userId: user.id,
+        deviceId: deviceId,
+        code: generatedCode,
+        expiresAt: expiresAt
+      }
+    });
+
+    return res.json({ 
+      id: user.id, 
+      role: user.role, 
+      needsOTP: true, 
+      message: "Device verification required." 
+    });
+
   } catch (error) {
-    console.error("❌ DATABASE ERROR:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Login Error:", error);
+    res.status(500).json({ message: "Login Error" });
   }
 });
 

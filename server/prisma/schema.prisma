@@ -18,27 +18,63 @@ enum Brand {
   INFINIX
 }
 
-model User {
-  id           Int      @id @default(autoincrement())
-  name         String
-  username     String   @unique
-  password     String
-  phoneNumber  String   @default("0000000000")
-  role         Role     @default(USER)
-  avatar       String   @default("https://ui-avatars.com/api/?name=User&background=random")
-  
-  // --- NEW COLUMNS FOR PUSH & SECURITY ---
-  pushToken    String?  // The Firebase address for this phone
-  deviceId     String?  // The unique ID to skip OTP on "Trusted Devices"
-  
-  createdAt    DateTime @default(now())
+// Added statuses for the Device Management logic
+enum DeviceStatus {
+  ACTIVE
+  DENIED
+  PENDING
+}
 
-  // Relation to track which notifications this user has read
+model User {
+  id               Int                @id @default(autoincrement())
+  name             String
+  username         String             @unique
+  password         String
+  phoneNumber      String             @default("0000000000")
+  role             Role               @default(USER)
+  avatar           String             @default("https://ui-avatars.com/api/?name=User&background=random")
+           
+  createdAt        DateTime           @default(now())
+
+  // --- RELATIONSHIPS ---
+  devices           UserDevice[]      // One user can have multiple devices
+  validationCode    ValidationCode?   // One user has one active pending code at a time
   readNotifications NotificationRead[]
 }
 
+// --- NEW MODEL: DEVICE MANAGEMENT ---
+model UserDevice {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  deviceId    String       @unique // The unique ID from the phone
+  pushToken   String?
+  deviceName  String?      // e.g., "Ahmad's iPhone"
+  deviceModel String?      // e.g., "iPhone 13"
+  brand       String?      // e.g., "Apple"
+  
+  status      DeviceStatus @default(PENDING) // Soft delete/Block logic
+  lastUsed    DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+
+  @@unique([userId, deviceId]) // Prevents duplicate entries for the same user/phone
+}
+
+// --- NEW MODEL: MANUAL OTP TRACKING ---
+model ValidationCode {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique // Ensures one code row per user (overwriting logic)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  code      String   // The 4-6 digit code
+  deviceId  String   @unique // Which device is currently requesting access?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
 model Phone {
-  id          String   @id // Manual ID (not automatic)
+  id          String   @id
   brand       Brand    @default(SAMSUNG)
   name        String
   price       Float
@@ -46,25 +82,19 @@ model Phone {
 }
 
 model Notification {
-  id      Int    @id @default(autoincrement())
-  message String
+  id        Int      @id @default(autoincrement())
+  message   String
   createdAt DateTime @default(now())
-
-  // Relation to see which users have read this specific notification
-  readBy  NotificationRead[]
+  readBy    NotificationRead[]
 }
 
-// --- NEW JOIN TABLE FOR RED DOT LOGIC ---
 model NotificationRead {
   id             Int          @id @default(autoincrement())
   userId         Int
   notificationId Int
   readAt         DateTime     @default(now())
-
-  // Connections
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
 
-  // Ensure a user can't "read" the same notification twice in the database
   @@unique([userId, notificationId])
 }
