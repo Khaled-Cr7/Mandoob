@@ -69,24 +69,29 @@ router.get('/check-status', async (req, res) => {
   const { deviceId, userId } = req.query;
 
   try {
-    // 1. Check device status
-    const device = await prisma.userDevice.findFirst({
-      where: { deviceId: String(deviceId), userId: Number(userId) }
+    // 1. Get device and user role
+    const device = await prisma.userDevice.findUnique({
+      where: { deviceId: String(deviceId) },
+      include: {
+        user: { select: { role: true } }
+      }
     });
 
-    // 2. Get current validation code
-    const valCode = await prisma.validationCode.findFirst({
-      where: { deviceId: String(deviceId), userId: Number(userId) },
-      orderBy: { createdAt: 'desc' }
+    if (!device) return res.status(404).json({ message: "Device not found" });
+
+    // 2. Get the expiry time for the current active code
+    const otpRecord = await prisma.validationCode.findUnique({
+      where: { userId: Number(userId) }
     });
 
     res.json({
-      status: device?.status || 'PENDING',
-      code: valCode?.code || '----',
-      expiresAt: valCode?.expiresAt
+      status: device.status,
+      role: device.user.role,
+      expiresAt: otpRecord ? otpRecord.expiresAt : null 
     });
-  } catch (error) {
-    res.status(500).json({ error: "Check failed" });
+  } catch (e) {
+    console.error("Status Check Error:", e);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -98,7 +103,7 @@ router.post('/verify-otp', async (req, res) => {
       userId: Number(userId),
       deviceId: String(deviceId),
       code: String(code),
-      expiresAt: { gt: new Date() } // Must not be expired
+      expiresAt: { gt: new Date() }
     }
   });
 
@@ -109,10 +114,21 @@ router.post('/verify-otp', async (req, res) => {
       data: { status: 'ACTIVE' }
     });
 
-    // 2. Cleanup code
+    // 2. Fetch the user to get their role
+    const user = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { role: true } // Only grab what we need
+    });
+
+    // 3. Cleanup code
     await prisma.validationCode.deleteMany({ where: { deviceId: String(deviceId) } });
 
-    return res.status(200).json({ message: "Verified" });
+    // 4. RETURN THE ROLE SO THE FRONTEND CAN ROUTE
+    return res.status(200).json({ 
+      message: "Verified", 
+      role: user?.role || 'USER',
+      userId: userId 
+    });
   }
 
   return res.status(401).json({ message: "Invalid or expired code" });

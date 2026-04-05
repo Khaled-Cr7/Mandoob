@@ -4,12 +4,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function OTPScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { userId, deviceId } = useLocalSearchParams();
-
   const [userEnteredCode, setUserEnteredCode] = useState(['', '', '', '']);
   const [status, setStatus] = useState('PENDING'); // PENDING or DENIED
   const [loading, setLoading] = useState(false);
@@ -19,17 +19,33 @@ export default function OTPScreen() {
 
   // 1. BACKSPACE LOGIC
   const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace') {
-      // 1. If box has a value, clear it and jump back immediately
+    const pressedKey = e.nativeEvent.key;
+
+    // --- 1. HANDLE BACKSPACE (Your existing logic) ---
+    if (pressedKey === 'Backspace') {
       if (userEnteredCode[index] !== '') {
         const newCode = [...userEnteredCode];
         newCode[index] = '';
         setUserEnteredCode(newCode);
         if (index > 0) inputs.current[index - 1]?.focus();
-      } 
-      // 2. If box was already empty, just jump back
-      else if (index > 0) {
+      } else if (index > 0) {
         inputs.current[index - 1]?.focus();
+      }
+      return;
+    }
+
+    // --- 2. THE SAME-NUMBER FIX (Handle digits 0-9) ---
+    if (/^[0-9]$/.test(pressedKey)) {
+      // Manually update the state for the current box
+      const newCode = [...userEnteredCode];
+      newCode[index] = pressedKey;
+      setUserEnteredCode(newCode);
+
+      // Force the jump immediately, even if the number is the same!
+      if (index < 3) {
+        setTimeout(() => {
+          inputs.current[index + 1]?.focus();
+        }, 10);
       }
     }
   };
@@ -82,17 +98,25 @@ export default function OTPScreen() {
       const data = await res.json();
       
       setStatus(data.status);
+
+      // If the device is active, route based on the role we just sent from the backend
       if (data.status === 'ACTIVE') {
-        router.replace('/(user)');
+        if (data.role === 'ADMIN') {
+          router.replace('/(admin)');
+        } else {
+          router.replace('/(user)');
+        }
         return;
       }
 
+      // Update the timer if we found an expiry date
       if (data.expiresAt) {
-        // THIS IS THE FIX: Update the state so the 1-second useEffect sees it
         setExpiryTimeFromDB(data.expiresAt); 
         calculateExpiry(data.expiresAt);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+      console.error("Polling error:", e); 
+    }
   };
 
   useEffect(() => {
@@ -135,47 +159,66 @@ export default function OTPScreen() {
 
   // 2. HANDLE CODE INPUT
   const handleInput = (text: string, index: number) => {
-    // 1. Get the new character (if they typed "55", take the last "5")
-    const char = text.length > 1 ? text.charAt(text.length - 1) : text;
+    // 1. If text is empty, it's a deletion (handled by handleKeyPress, but safety first)
+    if (text.length === 0) {
+      const newCode = [...userEnteredCode];
+      newCode[index] = '';
+      setUserEnteredCode(newCode);
+      return;
+    }
+
+    // 2. Get the new character (handles the "55" case)
+    const char = text.slice(-1); 
     
-    // 2. Update the state
+    // 3. Update the state
     const newCode = [...userEnteredCode];
     newCode[index] = char;
     setUserEnteredCode(newCode);
 
-    // 3. THE FIX: Jump even if it's the same number
-    // If the text has length (meaning a key was pressed) and we aren't at the end
-    if (text.length > 0 && index < 3) {
-      // We use a small timeout to ensure the state has "accepted" the press
-      // before we yank the focus away to the next box
+    // 4. THE MAGIC JUMP:
+    // We use a 0ms delay. This ensures the native side finishes 
+    // rendering the "5" before we yank the focus to the next box.
+    if (index < 3) {
       setTimeout(() => {
         inputs.current[index + 1]?.focus();
-      }, 10);
+      }, 0);
     }
   };
 
   // 3. VERIFY THE CODE
   const verifyCode = async () => {
-    setLoading(true);
-    try {
-      const fullCode = userEnteredCode.join('');
-      const res = await fetch(`${API_URL}/security/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, deviceId, code: fullCode })
-      });
+  setLoading(true);
+  try {
+    const fullCode = userEnteredCode.join('');
+    const res = await fetch(`${API_URL}/security/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, deviceId, code: fullCode })
+    });
 
-      if (res.ok) {
-        router.replace('/(user)');
+    const data = await res.json(); // Get user data (including role) from response
+
+    if (res.ok) {
+      // 1. Persist the ID immediately (just like in Login)
+      await AsyncStorage.setItem('userId', String(data.userId || userId));
+
+      // 2. Logic to route based on Role
+      if (data.role === 'ADMIN') {
+        router.replace('/(admin)');
       } else {
-        Alert.alert(t('error'), t('invalid_code') || "Invalid code. Please try again.");
+        router.replace(`/(user)?userId=${userId}`);
       }
-    } catch (e) {
-      Alert.alert(t('error'), t('connection_error'));
-    } finally {
-      setLoading(false);
+      
+      console.log("Verified as:", data.role);
+    } else {
+      Alert.alert(t('error'), t('invalid_code') || "Invalid code. Please try again.");
     }
-  };
+  } catch (e) {
+    Alert.alert(t('error'), t('connection_error'));
+  } finally {
+    setLoading(false);
+  }
+};
 
   // --- RENDER DENIED STATE ---
   if (status === 'DENIED') {
@@ -202,32 +245,42 @@ export default function OTPScreen() {
     {/* THE CODE BOXES */}
     <View className="flex-row justify-between mb-10">
     {userEnteredCode.map((char, index) => {
-      // We determine where the user SHOULD be
-      const firstEmptyIndex = userEnteredCode.findIndex(c => c === '');
-      const targetIndex = firstEmptyIndex === -1 ? 3 : firstEmptyIndex;
+      const firstEmpty = userEnteredCode.findIndex(c => c === '');
+      const target = firstEmpty === -1 ? 3 : firstEmpty;
 
       return (
         <TextInput
-          key={index}
+          // 1. STABLE KEY: This stops the keyboard from popping up/down
+          key={index} 
+          
           ref={(el) => { if (el) inputs.current[index] = el; }}
-          editable={!isExpired} 
+          editable={!isExpired}
+          
+          // 2. FORCE BOLDNESS: Using inline style bypasses the NativeWind glitch
+          style={{ 
+            fontWeight: '900', 
+            color: 'white', 
+            fontSize: 26,
+            textAlign: 'center' 
+          }}
+          
+          // Keep the rest of the layout in Tailwind
+          className={`w-[70px] h-20 bg-slate-800 border-2 rounded-2xl 
+            ${isExpired ? 'border-red-500' : 'border-slate-700'}`}
+          
+          maxLength={1}
+          keyboardType="number-pad"
+          selectTextOnFocus={true}
+          
+          onChangeText={(text) => {
+            if (text.length > 0) handleInput(text, index);
+          }}
+          onKeyPress={(e) => handleKeyPress(e, index)}
           onFocus={() => {
-            // Focus Magnet Logic from before
-            const firstEmpty = userEnteredCode.findIndex(c => c === '');
-            const target = firstEmpty === -1 ? 3 : firstEmpty;
             if (index > target) {
               inputs.current[target]?.focus();
             }
           }}
-          className={`w-[70px] h-20 bg-slate-800 border-2 rounded-2xl text-white text-3xl font-black text-center 
-            ${isExpired ? 'border-red-500' : 'border-slate-700'}`}
-          
-          maxLength={2}
-          keyboardType="number-pad"
-          contextMenuHidden={true}
-          selectTextOnFocus={true}
-          onChangeText={(text) => handleInput(text, index)}
-          onKeyPress={(e) => handleKeyPress(e, index)}
           value={userEnteredCode[index]}
         />
       );

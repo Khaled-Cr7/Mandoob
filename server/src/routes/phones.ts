@@ -51,21 +51,50 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// 1. Toggle Favorite (Heart/Unheart)
+router.post('/favorite', async (req, res) => {
+  const { userId, phoneId } = req.body;
+  try {
+    const existing = await prisma.favorite.findUnique({
+      where: { userId_phoneId: { userId, phoneId } }
+    });
+
+    if (existing) {
+      await prisma.favorite.delete({ where: { id: existing.id } });
+      return res.json({ isFavorite: false });
+    } else {
+      await prisma.favorite.create({ data: { userId, phoneId } });
+      return res.json({ isFavorite: true });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Error toggling favorite" });
+  }
+});
+
+
 
 // GET /api/phones
 router.get('/', async (req, res) => {
   try {
-    const { brands, sort, search } = req.query;
-    const cleanSearch = search ? String(search).trim() : "";
-
+    const { brands, sort, search, userId, favoritesOnly } = req.query;
     let AND_filters: any[] = [];
+    const orderDir = sort === 'OLD' ? 'asc' : 'desc';
 
-    // 1. Search Logic
-    if (cleanSearch) {
+    // --- FAVORITES FILTER ---
+    if (favoritesOnly === 'true' && userId) {
+      const parsedUserId = parseInt(String(userId), 10);
+      if (!isNaN(parsedUserId)) {
+        AND_filters.push({
+          favoritedBy: { some: { userId: parsedUserId } }
+        });
+      }
+    }
+
+    if (search) {
       AND_filters.push({
         OR: [
-          { name: { contains: cleanSearch, mode: 'insensitive' } },
-          { id: { contains: cleanSearch, mode: 'insensitive' } }
+          { name: { contains: String(search), mode: 'insensitive' } },
+          { id: { contains: String(search), mode: 'insensitive' } }
         ]
       });
     }
@@ -84,15 +113,40 @@ router.get('/', async (req, res) => {
     const orderBy = sort === 'OLD' ? 'asc' : 'desc';
 
     const phones = await prisma.phone.findMany({
-      // FIXED: Only use 'where' if there are actual filters
-      where: AND_filters.length > 0 ? { AND: AND_filters } : {}, 
-      orderBy: { lastUpdated: orderBy },
+      where: AND_filters.length > 0 ? { AND: AND_filters } : {},
+      include: {
+        favoritedBy: userId ? { where: { userId: Number(userId) } } : false
+      },
+      // --- THE NEW SORTING LOGIC ---
+      orderBy: favoritesOnly === 'true' && userId 
+        ? { 
+            // Sort by the date the user added it to their heart list
+            favoritedBy: {
+              _count: orderDir // This is a trick to sort by the join table date indirectly
+            } 
+          }
+        : { lastUpdated: orderDir }, // Default: sort by phone's last update
     });
 
-    res.json(phones);
-  } catch (error) {
-    console.error("❌ Prisma Query Failed:", error);
-    res.status(500).json([]); // Return empty array instead of error object to prevent frontend crash
+    // Map the result so "isFavorite" is a simple boolean for the frontend
+    let results = phones.map(p => ({
+      ...p,
+      isFavorite: p.favoritedBy?.length > 0,
+      favDate: p.favoritedBy?.[0]?.createdAt || null
+    }));
+
+    if (favoritesOnly === 'true') {
+      results.sort((a, b) => {
+        const dateA = new Date(a.favDate).getTime();
+        const dateB = new Date(b.favDate).getTime();
+        return orderDir === 'desc' ? dateB - dateA : dateA - dateB;
+      });
+    }
+
+    res.json(results);
+  } catch (error) { 
+    console.error(error);
+    res.status(500).json([]); 
   }
 });
 

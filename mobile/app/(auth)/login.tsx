@@ -73,20 +73,29 @@ export default function LoginScreen() {
       await AsyncStorage.setItem('userId', String(data.id));
 
       if (data.needsOTP) {
-        // FIX 3: Ensure path matches your file structure
         router.replace({ 
           pathname: '/(auth)/otp', 
           params: { userId: String(data.id), deviceId: deviceData.deviceId } 
         });
       } else {
+        // Standard successful login (No OTP needed)
         if (data.role === 'ADMIN') {
           router.replace('/(admin)');
         } else {
-          router.replace({ pathname: '/(user)', params: { userId: String(data.id) } });
+          router.replace('/(user)');
         }
       }
     } else {
-      Alert.alert(t('login_failed'), data.message || t('login_failed_msg'));
+      // --- THIS IS WHERE THE ERROR LOGIC LIVES ---
+      if (data.message === "DEVICE_LINKED_ELSEWHERE") {
+        Alert.alert(
+          t('access_denied'), 
+          t('device_already_linked_msg') || "This device is already linked to another account."
+        );
+      } else {
+        // Default error (Wrong password, etc.)
+        Alert.alert(t('login_failed'), data.message || t('login_failed_msg'));
+      }
     }
   } catch (error) {
     Alert.alert(t('error'), t('connection_error'));

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router'; 
+import { router, useLocalSearchParams, useRouter } from 'expo-router'; 
 import * as ImagePicker from 'expo-image-picker';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
@@ -10,11 +10,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates'; // Fixed import
 import { DevSettings } from 'react-native';
 import { RefreshControl } from 'react-native';
+import { useSession } from '@/hooks/useSession';
 
 export default function ProfileScreen() {
-  const params = useLocalSearchParams();
-  const router = useRouter();
-  const userId = params.userId || "11"; 
+  const { userId } = useSession();
   
   const [refreshKey, setRefreshKey] = useState(0);
   const [user, setUser] = useState<any>(null);
@@ -138,6 +137,8 @@ export default function ProfileScreen() {
   };
 
   const fetchUserProfile = async () => {
+    if (!userId) return; // EXIT EARLY if userId is null
+
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/profile/${userId}`);
@@ -151,7 +152,11 @@ export default function ProfileScreen() {
     }
   };
 
-  useEffect(() => { fetchUserProfile(); }, [userId]);
+  useEffect(() => {
+    if (userId) {
+      fetchUserProfile();
+    }
+  }, [userId]);
 
   const handleUpdatePassword = async () => {
     const { newPassword, confirmPassword } = passwordData;

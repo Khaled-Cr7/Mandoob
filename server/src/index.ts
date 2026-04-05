@@ -9,6 +9,7 @@ import adminUserRoutes from './routes/adminUsers';
 import profileRouter from './routes/profile';
 import path from 'path';
 import securityRoutes from './routes/security';
+import notificationRoutes from './routes/notifications';
 
 const app = express();
 const PORT = 3000;
@@ -29,6 +30,8 @@ app.use('/api/profile', profileRouter);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api/security', securityRoutes);
+
+app.use('/api/notifications', notificationRoutes);
 
 // 3. Start Server
 app.listen(PORT, () => {

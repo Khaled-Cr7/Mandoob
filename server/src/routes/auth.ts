@@ -37,12 +37,26 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { username },
+      where: { username: username.toLowerCase()},
     });
 
     if (!user || user.password !== password) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
+
+    const existingDeviceOwner = await prisma.userDevice.findUnique({
+      where: { deviceId: String(deviceId) }
+    });
+
+    // If the device exists AND it belongs to someone else
+    if (existingDeviceOwner && existingDeviceOwner.userId !== user.id) {
+      return res.status(403).json({ 
+        message: "DEVICE_LINKED_ELSEWHERE",
+        errorDetail: "This device is already linked to another account." 
+      });
+    }
+
+
 
     // 1. Check if this device is already in our table
     const existingDevice = await prisma.userDevice.findFirst({
@@ -57,7 +71,7 @@ router.post('/login', async (req, res) => {
     // --- CASE 2: DENIED ---
     // If it's denied, just send to OTP page (the OTP page will show the "Banned" UI)
     if (existingDevice && existingDevice.status === 'DENIED') {
-      return res.json({ id: user.id, role: user.role, needsOTP: true });
+      return res.json({ id: user.id, role: user.role, needsOTP: true, message: "DEVICE_DENIED" });
     }
 
     // --- CASE 3: NEW OR PENDING (NEEDS CODE) ---
@@ -81,7 +95,7 @@ router.post('/login', async (req, res) => {
 
     await prisma.validationCode.upsert({
       where: { deviceId: deviceId }, 
-      update: { code: generatedCode, expiresAt: expiresAt, createdAt: new Date() },
+      update: { code: generatedCode, expiresAt: expiresAt, createdAt: new Date(), userId: user.id },
       create: {
         userId: user.id,
         deviceId: deviceId,

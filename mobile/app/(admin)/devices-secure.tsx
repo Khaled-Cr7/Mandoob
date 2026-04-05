@@ -121,6 +121,9 @@ export default function DeviceSecureManagement() {
     
     devices.forEach((device) => {
       const userId = device.userId;
+
+      if (userId === 1) return;
+
       if (!groups[userId]) {
         groups[userId] = {
           user: device.user,
@@ -230,7 +233,9 @@ export default function DeviceSecureManagement() {
             {activeTab === 'PENDING' ? t('awaiting_codes') : activeTab === 'ACTIVE' ? t('authorized_hardware') : t('blacklisted')}
           </Text>
           <View className="bg-slate-200 px-3 py-1 rounded-full">
-            <Text className="text-[10px] font-black text-slate-600">{devices.length} {t('total')}</Text>
+            <Text className="text-[10px] font-black text-slate-600">
+              {groupedUsers.reduce((acc, curr) => acc + curr.deviceList.length, 0)} {t('total')}
+            </Text>
           </View>
         </View>
 

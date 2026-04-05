@@ -40,6 +40,7 @@ model User {
   devices           UserDevice[]      // One user can have multiple devices
   validationCode    ValidationCode?   // One user has one active pending code at a time
   readNotifications NotificationRead[]
+  favorites         Favorite[]
 }
 
 // --- NEW MODEL: DEVICE MANAGEMENT ---
@@ -79,6 +80,7 @@ model Phone {
   name        String
   price       Float
   lastUpdated DateTime @updatedAt
+  favoritedBy Favorite[]
 }
 
 model Notification {
@@ -98,3 +100,16 @@ model NotificationRead {
 
   @@unique([userId, notificationId])
 }
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  phoneId   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     Phone    @relation(fields: [phoneId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, phoneId]) // A user can only favorite a specific phone once
+}
+

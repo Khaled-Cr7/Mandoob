@@ -131,7 +131,16 @@
   "code_expired": "CODE EXPIRED",
   "expires_in": "Expires in",
   "request_new_code": "Request New Code",
-  "verify_and_enter": "Verify & Enter"
+  "verify_and_enter": "Verify & Enter",
+  "all_phones": "All Phones",
+  "favorites": "Favorites",
+  "savefavorite": "add to favorites",
+  "saved": "Saved",
+  "no_favorites": "You haven't saved any favorites yet",
+  "device_already_linked_msg": "This device is already linked to another account.",
+  "notifications": "Notifications",
+  "no_new_notifications": "Your inbox is clear",
+  "mark_all_read": "Mark all as read"
   
 
 }

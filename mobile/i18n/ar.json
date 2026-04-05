@@ -131,5 +131,14 @@
   "code_expired": "انتهت صلاحية الرمز",
   "expires_in": "ينتهي خلال",
   "request_new_code": "طلب رمز جديد",
-  "verify_and_enter": "تأكيد ودخول"
+  "verify_and_enter": "تأكيد ودخول",
+  "all_phones": "كل الهواتف",
+  "favorites": "المفضلة",
+  "savefavorite": "إضافة إلى المفضلة",
+  "saved": "محفوظ",
+  "no_favorites": "لم تقم بإضافة أي هواتف للمفضلة بعد",
+  "device_already_linked_msg": "هذا الجهاز مرتبط بالفعل بحساب آخر.",
+  "notifications": "الإشعارات",
+  "no_new_notifications": "لا توجد إشعارات جديدة",
+  "mark_all_read": "تحديد الكل كمقروء"
 }
