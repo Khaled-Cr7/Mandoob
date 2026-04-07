@@ -11,12 +11,14 @@ enum Role {
   ADMIN
 }
 
-enum Brand {
-  SAMSUNG
-  HONOR
-  TECHNO
-  INFINIX
+enum ChangeType {
+  ADDED
+  DELETED
+  PRICE_UPDATE
 }
+
+
+
 
 // Added statuses for the Device Management logic
 enum DeviceStatus {
@@ -41,6 +43,7 @@ model User {
   validationCode    ValidationCode?   // One user has one active pending code at a time
   readNotifications NotificationRead[]
   favorites         Favorite[]
+  systemChanges     SystemChange[]
 }
 
 // --- NEW MODEL: DEVICE MANAGEMENT ---
@@ -76,12 +79,20 @@ model ValidationCode {
 
 model Phone {
   id          String   @id
-  brand       Brand    @default(SAMSUNG)
   name        String
   price       Float
   lastUpdated DateTime @updatedAt
   favoritedBy Favorite[]
+  brandId Int
+  brand   Brand  @relation(fields: [brandId], references: [id])
 }
+
+model Brand {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  phones Phone[]
+}
+
 
 model Notification {
   id        Int      @id @default(autoincrement())
@@ -112,4 +123,22 @@ model Favorite {
 
   @@unique([userId, phoneId]) // A user can only favorite a specific phone once
 }
+
+
+model SystemChange {
+  id          Int        @id @default(autoincrement())
+  type        ChangeType
+  modelName   String     // e.g., "iPhone 15 Pro"
+  oldValue    String?    // Used for Price (e.g., "5000")
+  newValue    String?    // Used for Price (e.g., "4800")
+  isPublished Boolean    @default(false)
+
+  userId      Int
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+
+  createdAt   DateTime   @default(now())
+}
+
+
 

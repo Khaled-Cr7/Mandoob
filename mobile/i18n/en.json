@@ -140,7 +140,26 @@
   "device_already_linked_msg": "This device is already linked to another account.",
   "notifications": "Notifications",
   "no_new_notifications": "Your inbox is clear",
-  "mark_all_read": "Mark all as read"
-  
-
+  "mark_all_read": "Mark all as read",
+  "manage": "Manage",
+  "manage_brands": "Manage Brands",
+  "brand_name": "Brand Name (e.g. APPLE)",
+  "edit_brand": "Edit Brand",
+  "brand_name_required": "Please enter a brand name.",
+  "brand_exists": "This brand already exists in your list.",
+  "brand_in_use": "Cannot delete: This brand is linked to active inventory.",
+  "delete_brand_msg": "Are you sure? This will remove the brand from the system.",
+  "brand_added": "Brand added successfully",
+  "brand_updated": "Brand updated successfully",
+  "success": "Success",
+  "sort_ref": "Alphabetical (A-Z)",
+  "sort_date": "Date",
+  "system_logs": "System Logs",
+  "no_logs": "No history found.",
+  "price_shifted": "Price shifted from",
+  "to": "to",
+  "log_added_desc": "New device available in inventory.",
+  "log_deleted_desc": "Device removed from system records.",
+  "send_notification": "Send Notification",
+  "view_system_logs": "View System Logs"
 }

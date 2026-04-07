@@ -1,7 +1,6 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { Brand } from '@prisma/client';
 import pkg from 'pg';
 const { Pool } = pkg;
 
@@ -10,48 +9,162 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-
-router.get('/brands', (req, res) => {
-  // Object.values(Brand) returns ["SAMSUNG", "HONOR", "TECHNO", "INFINIX"]
-  const brandList = Object.values(Brand);
-  res.json(brandList);
+// --- BRAND ROUTES ---
+router.get('/brands', async (req, res) => {
+  try {
+    const brands = await prisma.brand.findMany({ orderBy: { name: 'asc' } });
+    res.json(brands);
+  } catch (error) {
+    res.status(500).json([]);
+  }
 });
 
-// DELETE /api/phones/:id
+router.post('/brands', async (req, res) => {
+  const { name } = req.body;
+  try {
+    const newBrand = await prisma.brand.create({
+      data: { name: name.toUpperCase().trim() }
+    });
+    res.json(newBrand);
+  } catch (e) {
+    res.status(400).json({ message: "Brand already exists" });
+  }
+});
+
+router.put('/brands/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  try {
+    const updated = await prisma.brand.update({
+      where: { id: Number(id) },
+      data: { name: name.toUpperCase().trim() }
+    });
+    res.json(updated);
+  } catch (e) {
+    res.status(400).json({ message: "Update failed or brand name exists" });
+  }
+});
+
+router.delete('/brands/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.brand.delete({ where: { id: Number(id) } });
+    res.json({ message: "Brand removed" });
+  } catch (e) {
+    res.status(400).json({ message: "Cannot delete brand with active stock" });
+  }
+});
+
+// --- SYSTEM CHANGES LOGGING ROUTE ---
+router.get('/changes', async (req, res) => {
+  const { userId } = req.query; // Get userId from query params
+  try {
+    const changes = await prisma.systemChange.findMany({
+      where: { userId: Number(userId) }, // Only show logs for this specific admin
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(changes);
+  } catch (error) {
+    res.status(500).json([]);
+  }
+});
+
+// --- PHONE ROUTES ---
+
+// DELETE PHONE
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
-  await prisma.phone.delete({ where: { id } });
-  res.json({ message: "Phone deleted successfully" });
+  const { userId } = req.body;
+  try {
+    const phoneToDelete = await prisma.phone.findUnique({ where: { id } });
+    if (phoneToDelete) {
+      await prisma.systemChange.create({
+        data: {
+          type: 'DELETED',
+          modelName: phoneToDelete.name,
+          userId: Number(userId), // Save who did it
+        }
+      });
+      await prisma.phone.delete({ where: { id } });
+    }
+    res.json({ message: "Deleted" });
+  } catch (e) { res.status(400).json({ message: "Error" }); }
 });
 
+// POST NEW PHONE
 router.post('/', async (req, res) => {
   try {
-    const { id, name, brand, price } = req.body;
+    // We extract userId from the body
+    const { id, name, brandId, price, userId } = req.body; 
+    
     const newPhone = await prisma.phone.create({
-      data: { id, name, brand, price, lastUpdated: new Date() }
+      data: { 
+        id, 
+        name, 
+        brandId: Number(brandId), 
+        price: parseFloat(price), 
+        lastUpdated: new Date() 
+      }
     });
+
+    // Log the change with the Admin's ID
+    await prisma.systemChange.create({
+      data: {
+        type: 'ADDED',
+        modelName: name,
+        userId: Number(userId), // Tracks who added it
+      }
+    });
+
     res.json(newPhone);
   } catch (error) {
+    console.error(error);
     res.status(400).json({ message: "ID already exists or invalid data" });
   }
 });
 
-// 2. EDIT PHONE (PUT)
+// UPDATE PHONE (With Price Change Detection)
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, brand, price } = req.body;
+    // We extract userId from the body
+    const { name, brandId, price, userId } = req.body; 
+    const newPrice = parseFloat(price);
+
+    // Get old data to check for price change
+    const oldPhone = await prisma.phone.findUnique({ where: { id } });
+
     const updated = await prisma.phone.update({
       where: { id },
-      data: { name, brand, price, lastUpdated: new Date() }
+      data: { 
+        name, 
+        brandId: Number(brandId), 
+        price: newPrice, 
+        lastUpdated: new Date() 
+      }
     });
+
+    // Check if price specifically changed
+    if (oldPhone && oldPhone.price !== newPrice) {
+      await prisma.systemChange.create({
+        data: {
+          type: 'PRICE_UPDATE',
+          modelName: name,
+          oldValue: oldPhone.price.toString(),
+          newValue: newPrice.toString(),
+          userId: Number(userId), // Tracks who changed the price
+        }
+      });
+    }
+
     res.json(updated);
   } catch (error) {
+    console.error(error);
     res.status(400).json({ message: "Update failed" });
   }
 });
 
-// 1. Toggle Favorite (Heart/Unheart)
+// TOGGLE FAVORITE
 router.post('/favorite', async (req, res) => {
   const { userId, phoneId } = req.body;
   try {
@@ -71,23 +184,14 @@ router.post('/favorite', async (req, res) => {
   }
 });
 
-
-
-// GET /api/phones
+// GET PHONES LIST
 router.get('/', async (req, res) => {
   try {
-    const { brands, sort, search, userId, favoritesOnly } = req.query;
+    const { brands, sortType, sortOrder, search, userId, favoritesOnly } = req.query;
     let AND_filters: any[] = [];
-    const orderDir = sort === 'OLD' ? 'asc' : 'desc';
 
-    // --- FAVORITES FILTER ---
     if (favoritesOnly === 'true' && userId) {
-      const parsedUserId = parseInt(String(userId), 10);
-      if (!isNaN(parsedUserId)) {
-        AND_filters.push({
-          favoritedBy: { some: { userId: parsedUserId } }
-        });
-      }
+      AND_filters.push({ favoritedBy: { some: { userId: Number(userId) } } });
     }
 
     if (search) {
@@ -99,54 +203,36 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // 2. Brand Logic - Strict Validation
     if (brands && brands !== 'ALL' && brands !== '') {
-      const brandArray = String(brands).split(',').filter(b => b.length > 0);
-      
-      if (brandArray.length > 0) {
-        AND_filters.push({
-          brand: { in: brandArray as any }
-        });
+      const brandIdArray = String(brands).split(',').map(Number).filter(id => !isNaN(id));
+      if (brandIdArray.length > 0) {
+        AND_filters.push({ brandId: { in: brandIdArray } });
       }
     }
 
-    const orderBy = sort === 'OLD' ? 'asc' : 'desc';
+    const direction = sortOrder === 'desc' ? 'desc' : 'asc';
+    const type = sortType === 'DATE' ? 'lastUpdated' : 'id';
 
     const phones = await prisma.phone.findMany({
       where: AND_filters.length > 0 ? { AND: AND_filters } : {},
       include: {
+        brand: true,
         favoritedBy: userId ? { where: { userId: Number(userId) } } : false
       },
-      // --- THE NEW SORTING LOGIC ---
-      orderBy: favoritesOnly === 'true' && userId 
-        ? { 
-            // Sort by the date the user added it to their heart list
-            favoritedBy: {
-              _count: orderDir // This is a trick to sort by the join table date indirectly
-            } 
-          }
-        : { lastUpdated: orderDir }, // Default: sort by phone's last update
+      orderBy: { [type]: direction },
     });
 
-    // Map the result so "isFavorite" is a simple boolean for the frontend
     let results = phones.map(p => ({
       ...p,
+      brand: p.brand ? p.brand.name : "UNKNOWN", 
       isFavorite: p.favoritedBy?.length > 0,
       favDate: p.favoritedBy?.[0]?.createdAt || null
     }));
 
-    if (favoritesOnly === 'true') {
-      results.sort((a, b) => {
-        const dateA = new Date(a.favDate).getTime();
-        const dateB = new Date(b.favDate).getTime();
-        return orderDir === 'desc' ? dateB - dateA : dateA - dateB;
-      });
-    }
-
     res.json(results);
   } catch (error) { 
-    console.error(error);
-    res.status(500).json([]); 
+    console.error("❌ GET /phones error:", error);
+    res.status(500).json({ message: "Internal Server Error" }); 
   }
 });
 

@@ -15,11 +15,12 @@ export default function UserInventoryScreen() {
   const [phones, setPhones] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectedBrands, setSelectedBrands] = useState<string[]>(['ALL']);
-  const [sortOrder, setSortOrder] = useState<'NEW' | 'OLD'>('NEW');
-  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
+  const [availableBrands, setAvailableBrands] = useState<{id: number, name: string}[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [sortType, setSortType] = useState<'ID' | 'DATE'>('ID');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const checkNotifications = async () => {
     if (!userId) return;
@@ -54,7 +55,6 @@ export default function UserInventoryScreen() {
         setAvailableBrands(data);
       } catch (error) {
         console.error("❌ Brand fetch failed:", error);
-        setAvailableBrands(['SAMSUNG', 'HONOR', 'TECHNO', 'INFINIX']); 
       }
     };
     fetchBrands();
@@ -73,29 +73,27 @@ export default function UserInventoryScreen() {
 
 
 
-  const toggleBrand = (brand: string) => {
-    if (brand === 'ALL') {
-      setSelectedBrands(['ALL']);
+  const toggleBrand = (brandId: number | 'ALL') => {
+    if (brandId === 'ALL') {
+      setSelectedBrands([]); // Empty array means "ALL"
       return;
     }
-    let newSelected = [...selectedBrands].filter(b => b !== 'ALL');
-    if (newSelected.includes(brand)) {
-      newSelected = newSelected.filter(b => b !== brand);
-      if (newSelected.length === 0) newSelected = ['ALL'];
+
+    if (selectedBrands.includes(brandId)) {
+      setSelectedBrands(selectedBrands.filter(id => id !== brandId));
     } else {
-      newSelected.push(brand);
+      setSelectedBrands([...selectedBrands, brandId]);
     }
-    setSelectedBrands(newSelected);
   };
 
   const fetchPhones = async () => {
     setLoading(true);
     try {
-      const brandQuery = selectedBrands.includes('ALL') ? 'ALL' : selectedBrands.join(',');
+      // If selectedBrands is empty, we send 'ALL'
+      const brandQuery = selectedBrands.length === 0 ? 'ALL' : selectedBrands.join(',');
       const favQuery = activeTab === 'FAVORITES' ? '&favoritesOnly=true' : '';
       
-      // We pass the sortOrder ('NEW' or 'OLD') which the backend translates to 'desc' or 'asc'
-      const url = `${API_URL}/phones?brands=${brandQuery}&sort=${sortOrder}&search=${search}&userId=${userId}${favQuery}`;
+      const url = `${API_URL}/phones?brands=${brandQuery}&sortType=${sortType}&sortOrder=${sortOrder}&search=${search}&userId=${userId}${favQuery}`;
       
       const response = await fetch(url);
       const data = await response.json();
@@ -106,6 +104,8 @@ export default function UserInventoryScreen() {
       setLoading(false);
     }
   };
+
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchPhones(); 
@@ -118,7 +118,7 @@ export default function UserInventoryScreen() {
     if (userId) {
       fetchPhones();
     }
-  }, [selectedBrands, sortOrder, search, activeTab, userId]); // Added userId to dependencies
+  }, [selectedBrands, sortOrder, sortType, search, activeTab, userId]); // Added userId to dependencies
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -163,30 +163,49 @@ export default function UserInventoryScreen() {
       <View>
         <View className="flex-row justify-between items-center px-6 mb-3 mt-4">
           <Text className="text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('filter_brands')}</Text>
-          <TouchableOpacity 
-            onPress={() => setSortOrder(prev => prev === 'NEW' ? 'OLD' : 'NEW')}
-            className="flex-row items-center bg-blue-50 px-4 py-2 rounded-xl border border-blue-100"
-          >
-            <Ionicons name="swap-vertical" size={13} color="#2563eb" />
-            <Text className="text-blue-600 font-black ml-1.5 text-[10px] uppercase">
-              {sortOrder === 'NEW' ? t('most_recent') : t('oldest')}
-            </Text>
-          </TouchableOpacity>
+          
+          <View className="flex-row gap-x-2">
+            {/* TOGGLE 1: TYPE (Alphabetical vs Date) */}
+            <TouchableOpacity 
+              onPress={() => setSortType(prev => prev === 'ID' ? 'DATE' : 'ID')}
+              className="flex-row items-center bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100"
+            >
+              <Ionicons name={sortType === 'ID' ? "text" : "calendar"} size={12} color="#2563eb" />
+              <Text className="text-blue-600 font-black ml-1.5 text-[9px] uppercase">
+                {sortType === 'ID' ? t('sort_ref') : t('sort_date')}
+              </Text>
+            </TouchableOpacity>
+
+            {/* TOGGLE 2: DIRECTION (A-Z or Z-A) */}
+            <TouchableOpacity 
+              onPress={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className="bg-blue-50 p-1.5 rounded-xl border border-blue-100"
+            >
+              <Ionicons 
+                name={sortOrder === 'asc' ? "arrow-up" : "arrow-down"} 
+                size={14} 
+                color="#2563eb" 
+              />
+            </TouchableOpacity>
+          </View>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24 }}>
           <TouchableOpacity
             onPress={() => toggleBrand('ALL')}
-            className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.includes('ALL') ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-slate-200'}`}
+            className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.length === 0 ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-slate-200'}`}
           >
-            <Text className={`font-black text-[11px] ${selectedBrands.includes('ALL') ? 'text-white' : 'text-slate-500'}`}>ALL</Text>
+            <Text className={`font-black text-[11px] ${selectedBrands.length === 0 ? 'text-white' : 'text-slate-500'}`}>ALL</Text>
           </TouchableOpacity>
+
           {availableBrands.map((brand) => (
             <TouchableOpacity
-              key={brand}
-              onPress={() => toggleBrand(brand)}
-              className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.includes(brand) ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-slate-200'}`}
+              key={brand.id}
+              onPress={() => toggleBrand(brand.id)}
+              className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.includes(brand.id) ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-slate-200'}`}
             >
-              <Text className={`font-black text-[11px] ${selectedBrands.includes(brand) ? 'text-white' : 'text-slate-500'}`}>{brand}</Text>
+              <Text className={`font-black text-[11px] ${selectedBrands.includes(brand.id) ? 'text-white' : 'text-slate-500'}`}>
+                {brand.name}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
