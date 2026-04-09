@@ -1,29 +1,96 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from 'expo-router';
 
 export default function SystemChangesScreen() {
+
+  interface SystemLog {
+    id: number;
+    type: 'ADDED' | 'DELETED' | 'PRICE_UPDATE';
+    modelName: string;
+    oldValue?: string;
+    newValue?: string;
+    createdAt: string;
+  }
+
+
   const { t } = useTranslation();
-  const [changes, setChanges] = useState([]);
+  const [changes, setChanges] = useState<SystemLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { userId } = useLocalSearchParams();
 
   const fetchChanges = async () => {
+    if (!userId) return;
     try {
-      const res = await fetch(`${API_URL}/phones/changes`);
+      // Filter the request so the server only returns THIS admin's logs
+      const res = await fetch(`${API_URL}/phones/changes?userId=${userId}`);
       const data = await res.json();
       setChanges(data);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
+
+  const handlePublish = async (logId: number) => {
+    try {
+      const res = await fetch(`${API_URL}/phones/changes/${logId}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: Number(userId) }) // Passing current admin ID
+      });
+
+      if (res.ok) {
+        Alert.alert(t('success'), t('notification_sent'));
+        // Remove it from the list since isPublished is now true
+        setChanges(prev => prev.filter(item => item.id !== logId));
+      } else {
+        Alert.alert(t('error'), t('action_failed'));
+      }
+    } catch (e) {
+      Alert.alert(t('error'), t('connection_error'));
+    }
+  };
+
+
+
+  const handleDeleteLog = (logId: number) => {
+    Alert.alert(
+      t('system_delete'),
+      t('delete_log_confirm'), // Add this to your JSON
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await fetch(`${API_URL}/phones/changes/${logId}?userId=${userId}`, {
+                method: 'DELETE',
+              });
+
+              if (res.ok) {
+                // Remove from local state so the UI updates instantly
+                setChanges(prev => prev.filter(log => log.id !== logId));
+              } else {
+                Alert.alert(t('error'), t('action_failed'));
+              }
+            } catch (e) {
+              Alert.alert(t('error'), t('connection_error'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+
 
   useFocusEffect(
     useCallback(() => {
@@ -32,10 +99,16 @@ export default function SystemChangesScreen() {
     }, [])
   );
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    fetchChanges();
-  }, []);
+    try {
+      await fetchChanges();
+    } catch (error) {
+      console.error("Refresh failed:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchChanges]);
 
   const getTypeStyles = (type: string) => {
     switch (type) {
@@ -88,12 +161,18 @@ export default function SystemChangesScreen() {
               )}
 
               <View className="flex-row mt-6 gap-x-3">
-                <TouchableOpacity className="flex-1 bg-slate-900 h-12 rounded-2xl flex-row justify-center items-center">
+                <TouchableOpacity 
+                  onPress={() => handlePublish(item.id)}
+                  className="flex-1 bg-slate-900 h-12 rounded-2xl flex-row justify-center items-center"
+                >
                   <Ionicons name="megaphone-outline" size={16} color="white" />
                   <Text className="text-white font-black text-[10px] uppercase ml-2">{t('send_notification')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity className="w-12 h-12 bg-red-50 rounded-2xl justify-center items-center border border-red-100">
+                <TouchableOpacity 
+                  onPress={() => handleDeleteLog(item.id)}
+                  className="w-12 h-12 bg-red-50 rounded-2xl justify-center items-center border border-red-100"
+                >
                   <Ionicons name="trash-outline" size={18} color="#ef4444" />
                 </TouchableOpacity>
               </View>

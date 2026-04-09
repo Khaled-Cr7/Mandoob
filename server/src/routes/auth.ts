@@ -65,6 +65,10 @@ router.post('/login', async (req, res) => {
 
     // --- CASE 1: SUCCESS (ALREADY ACTIVE) ---
     if (existingDevice && existingDevice.status === 'ACTIVE') {
+      await prisma.userDevice.update({
+        where: { deviceId: deviceId },
+        data: { pushToken: pushToken || existingDevice.pushToken, lastUsed: new Date() }
+      });
       return res.json({ id: user.id, role: user.role, needsOTP: false });
     }
 
@@ -78,13 +82,17 @@ router.post('/login', async (req, res) => {
     // We use UPSERT here to either create a new record or update the existing PENDING one
     await prisma.userDevice.upsert({
       where: { deviceId: deviceId },
-      update: { lastUsed: new Date() }, // Don't update 'status' here!
+      update: {
+        lastUsed: new Date(),
+        pushToken: pushToken || null
+      },
       create: {
         userId: user.id,
         deviceId,
         deviceName,
         deviceModel,
         brand,
+        pushToken: pushToken || null,
         status: 'PENDING'
       }
     });

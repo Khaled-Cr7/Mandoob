@@ -129,9 +129,9 @@
   "back_to_login": "العودة لتسجيل الدخول",
   "invalid_code": "الرمز غير صحيح أو منتهي الصلاحية. حاول مرة أخرى.",
   "code_expired": "انتهت صلاحية الرمز",
-  "expires_in": "ينتهي خلال",
+  "expires_in": "الصلاحية تنتهي خلال",
   "request_new_code": "طلب رمز جديد",
-  "verify_and_enter": "تأكيد ودخول",
+  "verify_and_enter": "التأكيد والدخول",
   "all_phones": "كل الهواتف",
   "favorites": "المفضلة",
   "savefavorite": "إضافة إلى المفضلة",
@@ -143,7 +143,7 @@
   "mark_all_read": "تحديد الكل كمقروء",
   "manage": "إدارة",
   "manage_brands": "إدارة العلامات التجارية",
-  "brand_name": "اسم العلامة (مثلاً APPLE)",
+  "brand_name": "اسم العلامة (مثلاً SAMSUNG)",
   "edit_brand": "تعديل العلامة",
   "brand_name_required": "يرجى إدخال اسم العلامة التجارية.",
   "brand_exists": "هذه العلامة موجودة بالفعل في القائمة.",
@@ -161,5 +161,10 @@
   "log_added_desc": "تم إضافة جهاز جديد للمخزون.",
   "log_deleted_desc": "تم حذف الجهاز من السجلات.",
   "send_notification": "إرسال تنبيه",
-  "view_system_logs": "عرض سجلات التغيير"
+  "view_system_logs": "عرض سجلات التغيير",
+  "delete_log_confirm": "هل أنت متأكد من حذف سجل التغيير هذا؟ لا يمكن التراجع عن هذه الخطوة.",
+  "notification_sent": "تم إرسال التنبيه لجميع المستخدمين بنجاح.",
+  "notif_price_change": "تغير سعر {{model}} من {{old}} إلى {{new}} ريال",
+  "notif_added": "تم إضافة {{model}} إلى المخزون!",
+  "notif_deleted": "{{model}} لم يعد متوفراً حالياً"
 }

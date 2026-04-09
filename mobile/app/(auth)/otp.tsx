@@ -290,7 +290,7 @@ export default function OTPScreen() {
     {/* TIMER & RESEND */}
     <View className="items-center mb-8">
     <Text className={`font-black ${isExpired ? 'text-red-500' : 'text-slate-400'}`}>
-        {isExpired ? "CODE EXPIRED" : `Expires in: ${expiryTime}`}
+        {isExpired ? t('code_expired') : ` ${t('expires_in')} ${expiryTime}`}
     </Text>
     
     {isExpired && (
@@ -308,7 +308,7 @@ export default function OTPScreen() {
     disabled={isExpired}
     className={`h-16 rounded-2xl items-center justify-center ${isExpired ? 'bg-slate-800' : 'bg-amber-500'}`}
     >
-    <Text className="text-slate-900 font-black uppercase text-lg">Verify & Enter </Text>
+    <Text className="text-slate-900 font-black uppercase text-lg">{t('verify_and_enter')}</Text>
     </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.replace('/login')} className="mt-8 self-center">

@@ -39,21 +39,31 @@ export default function LoginScreen() {
 
     let pushToken = "";
     
-    if (Constants.appOwnership !== 'expo') { 
+    if (Device.isDevice) { 
       try {
-        // FIX 2: Rename internal variable to avoid conflicts
         const ExpoNotifications = require('expo-notifications'); 
         
-        const { status } = await ExpoNotifications.getPermissionsAsync();
-        if (status === 'granted') {
+        const { status: existingStatus } = await ExpoNotifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+
+        if (existingStatus !== 'granted') {
+          const { status } = await ExpoNotifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        if (finalStatus === 'granted') {
           const tokenData = await ExpoNotifications.getExpoPushTokenAsync({
+            // Ensure you have a projectID in your app.json!
             projectId: Constants.expoConfig?.extra?.eas?.projectId,
           });
           pushToken = tokenData.data;
+          console.log("Token generated:", pushToken);
         }
       } catch (tokenError) {
-        console.log("Push token skipped");
+        console.log("Push token error:", tokenError);
       }
+    } else {
+      console.log("Push notifications skipped: Not a physical device.");
     }
 
     const response = await fetch(`${API_URL}/login`, {
@@ -94,7 +104,7 @@ export default function LoginScreen() {
         );
       } else {
         // Default error (Wrong password, etc.)
-        Alert.alert(t('login_failed'), data.message || t('login_failed_msg'));
+        Alert.alert(t('login_failed'), t('login_failed_msg'));
       }
     }
   } catch (error) {

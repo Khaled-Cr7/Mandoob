@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshControl } from 'react-native';
 import i18n from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSession } from '@/hooks/useSession';
 
 export default function AdminPhoneManagement() {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ export default function AdminPhoneManagement() {
   const [brandForm, setBrandForm] = useState({ id: null as number | null, name: '' });
   const [sortType, setSortType] = useState<'ID' | 'DATE'>('ID'); // Default: Alphabetical Ref
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Default: A-Z
+  const { userId } = useSession() || {};
 
 
   // --- NEW: FORM & MODAL STATES ---
@@ -163,12 +165,10 @@ export default function AdminPhoneManagement() {
       const response = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        // 4. SEND DATA: Send brandId to the updated backend
         body: JSON.stringify({ 
-          id: formData.id,
-          name: formData.name,
-          brandId: formData.brandId,
-          price: parseFloat(formData.price) 
+          ...formData, 
+          price: parseFloat(formData.price),
+          userId: Number(userId)
         })
       });
 
@@ -204,7 +204,11 @@ export default function AdminPhoneManagement() {
         style: "destructive", 
         onPress: async () => {
           try {
-            await fetch(`${API_URL}/phones/${id}`, { method: 'DELETE' });
+            await fetch(`${API_URL}/phones/${id}`, { 
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: Number(userId) }) 
+            });
             fetchPhones();
           } catch (e) {
             Alert.alert(t('error'), t('server_rejected'));
@@ -371,7 +375,7 @@ export default function AdminPhoneManagement() {
               className="flex-row items-center bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700"
             >
               <Ionicons name="settings-sharp" size={12} color="#fbbf24" />
-              <Text className="text-amber-500 font-black text-[9px] ml-2 uppercase tracking-tighter">
+              <Text className="text-amber-500 font-black text-[9px] ml-2 uppercase">
                 {t('manage_brands')}
               </Text>
             </TouchableOpacity>
@@ -405,7 +409,7 @@ export default function AdminPhoneManagement() {
             </Text>
             {/* NEW LOGS BUTTON */}
             <TouchableOpacity 
-              onPress={() => router.push('/(admin)/changes')} // Adjust path to where you saved the file
+              onPress={() => router.push({ pathname: '/(admin)/changes', params: { userId } })} 
               className="flex-row items-center mt-1"
             >
               <Ionicons name="list-circle-outline" size={14} color="#64748b" />

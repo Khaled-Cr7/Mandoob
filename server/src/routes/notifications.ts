@@ -24,7 +24,7 @@ router.get('/:userId', async (req, res) => {
 
     const notifications = await prisma.notification.findMany({
       where: {
-        createdAt: { gte: user.createdAt } // Only show news since they joined
+        createdAt: { gte: user.createdAt } 
       },
       include: {
         readBy: {
@@ -34,15 +34,20 @@ router.get('/:userId', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
+    // --- UPDATED MAPPING: INCLUDE ALL DATA FIELDS ---
     const results = notifications.map(n => ({
       id: n.id,
-      message: n.message,
+      type: n.type,           // Added
+      modelName: n.modelName, // Added
+      oldPrice: n.oldPrice,   // Added
+      newPrice: n.newPrice,   // Added
       createdAt: n.createdAt,
       isRead: n.readBy.length > 0
     }));
 
     res.json(results);
   } catch (error) {
+    console.error("GET Notifications error:", error);
     res.status(500).json([]);
   }
 });
@@ -78,5 +83,41 @@ router.post('/mark-all-read', async (req, res) => {
     res.status(500).json({ error: "Failed to clear notifications" });
   }
 });
+
+
+// POST /api/notifications/register-token
+router.post('/register-token', async (req, res) => {
+  const { userId, deviceId, pushToken, deviceName, deviceModel } = req.body;
+
+  try {
+    const device = await prisma.userDevice.upsert({
+      where: {
+        userId_deviceId: {
+          userId: Number(userId),
+          deviceId: deviceId,
+        },
+      },
+      update: {
+        pushToken: pushToken,
+        lastUsed: new Date(),
+      },
+      create: {
+        userId: Number(userId),
+        deviceId: deviceId,
+        pushToken: pushToken,
+        deviceName: deviceName,
+        deviceModel: deviceModel,
+        status: 'ACTIVE', // Or PENDING if you want to manually approve devices
+      },
+    });
+
+    res.json({ success: true, device });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to register device token" });
+  }
+});
+
+
 
 export default router;

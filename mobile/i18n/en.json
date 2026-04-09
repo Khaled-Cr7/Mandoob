@@ -143,7 +143,7 @@
   "mark_all_read": "Mark all as read",
   "manage": "Manage",
   "manage_brands": "Manage Brands",
-  "brand_name": "Brand Name (e.g. APPLE)",
+  "brand_name": "Brand Name (e.g. SAMSUNG)",
   "edit_brand": "Edit Brand",
   "brand_name_required": "Please enter a brand name.",
   "brand_exists": "This brand already exists in your list.",
@@ -161,5 +161,10 @@
   "log_added_desc": "New device available in inventory.",
   "log_deleted_desc": "Device removed from system records.",
   "send_notification": "Send Notification",
-  "view_system_logs": "View System Logs"
+  "view_system_logs": "View System Logs",
+  "delete_log_confirm": "Are you sure you want to remove this log entry? This cannot be undone.",
+  "notification_sent": "Notification has been broadcasted to all users.",
+  "notif_price_change": "{{model}} price shifted from {{old}} to {{new}} SAR",
+  "notif_added": "{{model}} has been added to inventory!",
+  "notif_deleted": "{{model}} is no longer available"
 }

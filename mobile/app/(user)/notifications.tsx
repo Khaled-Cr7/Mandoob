@@ -15,6 +15,37 @@ export default function NotificationListScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+
+  const renderNotificationMessage = (item: any) => {
+    // If it's an old notification that still has a hardcoded string
+    if (item.message && !item.type) return item.message;
+
+    switch (item.type) {
+      case 'PRICE_UPDATE':
+        return t('notif_price_change', { 
+          model: item.modelName, 
+          old: item.oldPrice, 
+          new: item.newPrice 
+        });
+      case 'ADDED':
+        return t('notif_added', { model: item.modelName });
+      case 'DELETED':
+        return t('notif_deleted', { model: item.modelName });
+      default:
+        return item.message || "";
+    }
+  };
+
+  // --- NEW: Dynamic Icon Helper ---
+  const getIconConfig = (type: string, isRead: boolean) => {
+    switch (type) {
+      case 'ADDED': return { name: 'add-circle' as any, color: isRead ? '#94a3b8' : '#10b981' };
+      case 'DELETED': return { name: 'trash' as any, color: isRead ? '#94a3b8' : '#ef4444' };
+      case 'PRICE_UPDATE': return { name: 'pricetag' as any, color: isRead ? '#94a3b8' : '#3b82f6' };
+      default: return { name: 'notifications' as any, color: isRead ? '#94a3b8' : '#3b82f6' };
+    }
+  };
+
   // 1. Updated fetchNotifications
   const fetchNotifications = async () => {
     if (!userId) return;
@@ -98,28 +129,31 @@ export default function NotificationListScreen() {
             </View>
           )
         }
-        renderItem={({ item }: any) => (
-          <View className={`mb-3 p-5 rounded-[28px] border flex-row items-start ${item.isRead ? 'bg-white border-slate-100' : 'bg-blue-50/50 border-blue-100'}`}>
-            <View className={`w-10 h-10 rounded-full items-center justify-center ${item.isRead ? 'bg-slate-100' : 'bg-blue-500'}`}>
-              <Ionicons name="notifications" size={18} color={item.isRead ? "#94a3b8" : "#ffffff"} />
-            </View>
-            
-            <View className="flex-1 ml-4">
-              <View className="flex-row justify-between items-start">
-                <Text className={`flex-1 text-sm leading-5 mb-1 ${item.isRead ? 'text-slate-600 font-medium' : 'text-slate-900 font-black'}`}>
-                  {String(item.message || "")}
-                </Text>
-                {/* SAFE CONDITIONAL: Avoid using && with potentially falsy values */}
-                {!item.isRead ? (
-                  <View className="w-2.5 h-2.5 bg-blue-500 rounded-full ml-2 mt-1.5" />
-                ) : null}
+        renderItem={({ item }: any) => {
+          const iconConfig = getIconConfig(item.type, item.isRead);
+          
+          return (
+            <View className={`mb-3 p-5 rounded-[28px] border flex-row items-start ${item.isRead ? 'bg-white border-slate-100' : 'bg-blue-50/50 border-blue-100'}`}>
+              <View className={`w-10 h-10 rounded-full items-center justify-center ${item.isRead ? 'bg-slate-100' : 'bg-white shadow-sm'}`}>
+                <Ionicons name={iconConfig.name} size={18} color={iconConfig.color} />
               </View>
-              <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                {formatTime(item.createdAt)}
-              </Text>
+              
+              <View className="flex-1 ml-4">
+                <View className="flex-row justify-between items-start">
+                  <Text className={`flex-1 text-sm leading-5 mb-1 ${item.isRead ? 'text-slate-600 font-medium' : 'text-slate-900 font-black'}`}>
+                    {renderNotificationMessage(item)}
+                  </Text>
+                  {!item.isRead ? (
+                    <View className="w-2.5 h-2.5 bg-blue-500 rounded-full ml-2 mt-1.5" />
+                  ) : null}
+                </View>
+                <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                  {formatTime(item.createdAt)}
+                </Text>
+              </View>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
     </View>
   );

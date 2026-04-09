@@ -53,7 +53,7 @@ model UserDevice {
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   deviceId    String       @unique // The unique ID from the phone
-  pushToken   String?
+  pushToken   String?      @unique
   deviceName  String?      // e.g., "Ahmad's iPhone"
   deviceModel String?      // e.g., "iPhone 13"
   brand       String?      // e.g., "Apple"
@@ -95,9 +95,12 @@ model Brand {
 
 
 model Notification {
-  id        Int      @id @default(autoincrement())
-  message   String
-  createdAt DateTime @default(now())
+  id        Int        @id @default(autoincrement())
+  type      ChangeType @default(ADDED)
+  modelName String
+  oldPrice  String?
+  newPrice  String?
+  createdAt DateTime   @default(now())
   readBy    NotificationRead[]
 }
 

@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pkg from 'pg';
 const { Pool } = pkg;
+import { sendBroadcastNotification } from '../services/pushNotification';
 
 const router = express.Router();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -57,10 +58,13 @@ router.delete('/brands/:id', async (req, res) => {
 
 // --- SYSTEM CHANGES LOGGING ROUTE ---
 router.get('/changes', async (req, res) => {
-  const { userId } = req.query; // Get userId from query params
+  const { userId } = req.query;
   try {
     const changes = await prisma.systemChange.findMany({
-      where: { userId: Number(userId) }, // Only show logs for this specific admin
+      where: { 
+        userId: Number(userId),
+        isPublished: false // 👈 ONLY GET UNPUBLISHED ROWS
+      },
       orderBy: { createdAt: 'desc' }
     });
     res.json(changes);
@@ -69,26 +73,108 @@ router.get('/changes', async (req, res) => {
   }
 });
 
+
+// DELETE /api/phones/changes/:id
+router.delete('/changes/:id', async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.query; // Pass userId to verify ownership
+
+  try {
+    const log = await prisma.systemChange.findUnique({ where: { id: Number(id) } });
+
+    if (!log) {
+      return res.status(404).json({ message: "Log not found" });
+    }
+
+    if (log.userId !== Number(userId)) {
+      return res.status(403).json({ message: "Unauthorized to delete this log" });
+    }
+
+    await prisma.systemChange.delete({ where: { id: Number(id) } });
+    res.json({ message: "Log deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting log" });
+  }
+});
+
+
+// POST /api/phones/changes/:id/publish
+router.post('/changes/:id/publish', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const log = await tx.systemChange.findUnique({ where: { id: Number(id) } });
+      if (!log || log.isPublished) throw new Error("Log not found");
+
+      // SAVE THE DATA, NOT THE SENTENCE
+      const notification = await tx.notification.create({
+        data: { 
+          type: log.type,
+          modelName: log.modelName,
+          oldPrice: log.oldValue,
+          newPrice: log.newValue
+        }
+      });
+
+      await tx.systemChange.update({
+        where: { id: Number(id) },
+        data: { isPublished: true }
+      });
+
+      return notification;
+    });
+
+    // 📢 TRIGGER THE PUSH
+    let title = "Kunooz Update";
+    let body = "";
+
+    if (result.type === 'PRICE_UPDATE') {
+      body = `Price Drop! ${result.modelName} is now ${result.newPrice} SAR.`;
+    } else if (result.type === 'ADDED') {
+      body = `New Arrival: ${result.modelName} just landed in stock!`;
+    } else {
+      body = `Inventory check: ${result.modelName} status has changed.`;
+    }
+
+    // This sends to every active device in the UserDevice table
+    sendBroadcastNotification(title, body);
+
+    res.json({ message: "Published and Pushed" });
+  } catch (error : any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+
+
+
+
+
 // --- PHONE ROUTES ---
 
 // DELETE PHONE
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
-  const { userId } = req.body;
+  const { userId } = req.body; // Front-end must send { "userId": ... } in the body
+
   try {
     const phoneToDelete = await prisma.phone.findUnique({ where: { id } });
+    
     if (phoneToDelete) {
       await prisma.systemChange.create({
         data: {
           type: 'DELETED',
           modelName: phoneToDelete.name,
-          userId: Number(userId), // Save who did it
+          userId: Number(userId),
         }
       });
       await prisma.phone.delete({ where: { id } });
     }
-    res.json({ message: "Deleted" });
-  } catch (e) { res.status(400).json({ message: "Error" }); }
+    res.json({ message: "Phone deleted successfully" });
+  } catch (error) {
+    res.status(400).json({ message: "Delete failed" });
+  }
 });
 
 // POST NEW PHONE

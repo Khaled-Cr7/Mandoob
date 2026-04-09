@@ -39,7 +39,7 @@ export default function RootLayout() {
     syncLayoutAtStartup();
   }, []);
   return (
-    <Stack screenOptions={{ headerShown: false }} initialRouteName="(auth)/login">
+    <Stack screenOptions={{ headerShown: false }} initialRouteName="(admin)">
       <Stack.Screen name="(auth)/login" />
       <Stack.Screen name="(admin)" />
       <Stack.Screen name="(user)" />  
