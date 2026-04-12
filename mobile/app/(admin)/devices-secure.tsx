@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, I18nManager, DevSettings } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, I18nManager, DevSettings, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -7,12 +7,15 @@ import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '@/i18n';
 import * as Updates from 'expo-updates';
+import * as Application from 'expo-application';
 
 type DeviceStatus = 'PENDING' | 'ACTIVE' | 'DENIED';
 
 export default function DeviceSecureManagement() {
   const { t } = useTranslation();
-  
+
+  const params = useLocalSearchParams();
+  const userId = params.userId || "11";
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,8 +60,25 @@ export default function DeviceSecureManagement() {
         text: t('sign_out'), 
         style: "destructive", 
         onPress: async () => {
-          await AsyncStorage.removeItem('userId'); // Clear the session!
-          router.replace('/(auth)/login'); 
+          try {
+            // 1. Get the current deviceId
+            const deviceId = Platform.OS === 'android' 
+              ? await Application.getAndroidId() 
+              : await Application.getIosIdForVendorAsync();
+
+            // 2. Tell the server to stop sending pushes to this device
+            await fetch(`${API_URL}/logout`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, deviceId })
+            });
+          } catch (e) {
+            console.log("Push token cleanup failed, logging out anyway.");
+          } finally {
+            // 3. Always clear the local session and redirect
+            await AsyncStorage.removeItem('userId');
+            router.replace('/(auth)/login'); 
+          }
         } 
       }
     ]);

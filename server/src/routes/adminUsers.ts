@@ -1,17 +1,9 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pkg from 'pg';
-const { Pool } = pkg;
+import { prisma } from '../index';
+
 
 const router = express.Router();
 
-// 1. Set up the connection pool (The Bridge)
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-
-// 2. Pass the adapter to Prisma (This fixes your error!)
-const prisma = new PrismaClient({ adapter });
 
 // 1. GET ALL USERS
 router.get('/', async (req, res) => {

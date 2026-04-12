@@ -1,36 +1,11 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pkg from 'pg';
-const { Pool } = pkg;
+import {prisma} from '../index';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-
-console.log("🔍 Testing ENV URL:", process.env.DATABASE_URL ? "FOUND ✅" : "NOT FOUND ❌");
-
-
 const router = express.Router();
 
-// 1. Create the connection pool
-const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL
-});
-
-pool.connect((err, client, release) => {
-  if (err) {
-    return console.error('❌ POOL ERROR: Could not connect to PostgreSQL', err.stack);
-  }
-  console.log('✅ POOL SUCCESS: Connected to PostgreSQL');
-  release();
-});
-
-// 2. Create the adapter
-const adapter = new PrismaPg(pool);
-
-// 3. Initialize Prisma with the adapter
-const prisma = new PrismaClient({ adapter });
 
 router.post('/login', async (req, res) => {
   const { username, password, deviceId, deviceModel, brand, deviceName, pushToken } = req.body;
@@ -124,5 +99,29 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ message: "Login Error" });
   }
 });
+
+// POST /api/logout
+router.post('/logout', async (req, res) => {
+  const { userId, deviceId } = req.body;
+
+  try {
+    await prisma.userDevice.update({
+      where: {
+        userId_deviceId: {
+          userId: Number(userId),
+          deviceId: deviceId,
+        },
+      },
+      data: { pushToken: null },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    // We don't want to block the user from logging out if the server fails
+    res.status(500).json({ message: "Logout recorded locally only" });
+  }
+});
+
+
 
 export default router;

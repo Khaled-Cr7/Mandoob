@@ -1,17 +1,10 @@
 import express, { Request, Response } from 'express';
-import { PrismaClient, DeviceStatus } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pkg from 'pg';
+import { DeviceStatus } from '@prisma/client';
+import { prisma } from '../index';
 
-const { Pool } = pkg;
+
 const router = express.Router();
 
-// 1. Set up the connection pool (The Bridge)
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-
-// 2. Pass the adapter to Prisma (Matches your other routes!)
-const prisma = new PrismaClient({ adapter });
 
 // --- 1. GET ALL DEVICES ---
 router.get('/devices', async (req: Request, res: Response) => {

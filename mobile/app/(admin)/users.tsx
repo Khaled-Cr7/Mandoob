@@ -2,15 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, Image, Modal, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, I18nManager, DevSettings } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '@/i18n';
 import * as Updates from 'expo-updates';
+import * as Application from 'expo-application';
 
 export default function PersonnelManagement() {
+  const params = useLocalSearchParams();
+  const userId = params.userId || "11";
   const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -63,8 +66,25 @@ export default function PersonnelManagement() {
         text: t('sign_out'), 
         style: "destructive", 
         onPress: async () => {
-          await AsyncStorage.removeItem('userId'); // Clear the session!
-          router.replace('/(auth)/login'); 
+          try {
+            // 1. Get the current deviceId
+            const deviceId = Platform.OS === 'android' 
+              ? await Application.getAndroidId() 
+              : await Application.getIosIdForVendorAsync();
+
+            // 2. Tell the server to stop sending pushes to this device
+            await fetch(`${API_URL}/logout`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, deviceId })
+            });
+          } catch (e) {
+            console.log("Push token cleanup failed, logging out anyway.");
+          } finally {
+            // 3. Always clear the local session and redirect
+            await AsyncStorage.removeItem('userId');
+            router.replace('/(auth)/login'); 
+          }
         } 
       }
     ]);

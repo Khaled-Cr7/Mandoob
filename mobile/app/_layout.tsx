@@ -2,11 +2,39 @@ import { Stack } from "expo-router";
 import "./globals.css"
 import "../i18n"; 
 import { useEffect } from 'react';
-import { I18nManager } from 'react-native';
+import { I18nManager, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
+import * as Notifications from 'expo-notifications';
+
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
 
 export default function RootLayout() {
+
+  useEffect(() => {
+    // 1. Listen for notifications arriving while app is open
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
+      console.log("🔔 Notification Received:", notification);
+      Alert.alert(
+        notification.request.content.title || "Update",
+        notification.request.content.body || ""
+      );
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+
   useEffect(() => {
     const syncLayoutAtStartup = async () => {
       try {
@@ -39,7 +67,7 @@ export default function RootLayout() {
     syncLayoutAtStartup();
   }, []);
   return (
-    <Stack screenOptions={{ headerShown: false }} initialRouteName="(admin)">
+    <Stack screenOptions={{ headerShown: false }} initialRouteName="(auth)/login">
       <Stack.Screen name="(auth)/login" />
       <Stack.Screen name="(admin)" />
       <Stack.Screen name="(user)" />  

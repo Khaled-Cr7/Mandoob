@@ -1,8 +1,5 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pkg from 'pg';
-const { Pool } = pkg;
+import { prisma } from '../index';
 import fs from 'fs';
 
 // 1. Import Multer and path
@@ -10,9 +7,6 @@ import multer from 'multer';
 import path from 'path';
 
 const router = express.Router();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 
 // 2. Configure Multer for local storage

@@ -1,8 +1,7 @@
 import { Expo, ExpoPushMessage } from 'expo-server-sdk';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../index';
 
 const expo = new Expo();
-const prisma = new PrismaClient();
 
 export async function sendBroadcastNotification(title: string, body: string) {
   // 1. Get all active tokens

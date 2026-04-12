@@ -1,13 +1,7 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pkg from 'pg';
-const { Pool } = pkg;
+import { prisma } from '../index';
 
 const router = express.Router();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
 
 // 1. GET USER NOTIFICATIONS
 router.get('/:userId', async (req, res) => {
