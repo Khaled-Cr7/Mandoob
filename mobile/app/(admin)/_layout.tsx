@@ -67,6 +67,12 @@ export default function AdminLayout() {
           href: null, // THIS HIDES IT FROM THE TAB BAR
         }} 
       />
+      <Tabs.Screen 
+        name="notifications" // This must match your filename (notifications.tsx)
+        options={{ 
+          href: null, // THIS HIDES IT FROM THE TAB BAR
+        }} 
+      />
 
     </Tabs>
   );

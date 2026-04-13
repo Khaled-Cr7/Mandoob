@@ -166,5 +166,16 @@
   "notification_sent": "Notification has been broadcasted to all users.",
   "notif_price_change": "{{model}} price shifted from {{old}} to {{new}} SAR",
   "notif_added": "{{model}} has been added to inventory!",
-  "notif_deleted": "{{model}} is no longer available"
+  "notif_deleted": "{{model}} is no longer available",
+  "my_pending_tasks": "My Pending Tasks",
+  "no_pending_drafts": "No pending changes in your workspace",
+  "log_price_desc": "Price adjusted from {{old}} to {{new}} SAR",
+  "master_audit_log": "Master Audit Log",
+  "master_audit_log_title": "Master System Record (All Admins)",
+  "editor": "Editor",
+  "published_status": "PUBLISHED",
+  "pending_status": "PENDING",
+  "price_shift_label": "Price shift",
+  "full_enroll_msg": "Full device registration completed.",
+  "device_remove_msg": "Device removed from inventory."
 }

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '@/i18n';
 import * as Updates from 'expo-updates';
 import * as Application from 'expo-application';
+import { handleLanguageToggle } from '../../utils/language';
 
 export default function AdminManagement() {
   const { t } = useTranslation();
@@ -32,34 +33,8 @@ export default function AdminManagement() {
   const [copiedPass, setCopiedPass] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const toggleLanguage = async () => {
-    const newLang = i18n.language === 'ar' ? 'en' : 'ar';
-    try {
-      await i18n.changeLanguage(newLang);
-      await AsyncStorage.setItem('user-language', newLang);
-      
-      const isArabic = newLang === 'ar';
-      I18nManager.allowRTL(isArabic);
-      I18nManager.forceRTL(isArabic);
-
-      const doRestart = async () => {
-        try {
-          await Updates.reloadAsync();
-        } catch (e) {
-          if (__DEV__) DevSettings.reload();
-          else Alert.alert("Manual Restart", "Please reopen the app to apply the layout.");
-        }
-      };
-
-      Alert.alert(
-        t('restart_required'), 
-        t('restart_msg'), 
-        [{ text: t('restart'), onPress: () => doRestart() }], 
-        { cancelable: false }
-      );
-    } catch (error) {
-      console.error("Language Error:", error);
-    }
+  const toggleLanguage = () => {
+    handleLanguageToggle(i18n, t, userId);
   };
 
   const handleSignOut = () => {
@@ -249,7 +224,7 @@ export default function AdminManagement() {
           >
             <Ionicons name="globe-outline" size={18} color="#fbbf24" />
             <Text className="text-white font-black text-[10px] ml-2 uppercase">
-              {i18n.language === 'ar' ? 'English' : 'العربية'}
+              {i18n.language === 'ar' ? 'EN' : 'AR'}
             </Text>
           </TouchableOpacity>
 

@@ -161,10 +161,21 @@
   "log_added_desc": "تم إضافة جهاز جديد للمخزون.",
   "log_deleted_desc": "تم حذف الجهاز من السجلات.",
   "send_notification": "إرسال تنبيه",
-  "view_system_logs": "عرض سجلات التغيير",
+  "view_system_logs": " عرض سجلات التغيير",
   "delete_log_confirm": "هل أنت متأكد من حذف سجل التغيير هذا؟ لا يمكن التراجع عن هذه الخطوة.",
   "notification_sent": "تم إرسال التنبيه لجميع المستخدمين بنجاح.",
   "notif_price_change": "تغير سعر {{model}} من {{old}} إلى {{new}} ريال",
   "notif_added": "تم إضافة {{model}} إلى المخزون!",
-  "notif_deleted": "{{model}} لم يعد متوفراً حالياً"
+  "notif_deleted": "{{model}} لم يعد متوفراً حالياً",
+  "my_pending_tasks": "مهامي المعلقة",
+  "no_pending_drafts": "لا توجد تغييرات معلقة في مساحة عملك",
+  "log_price_desc": "تم تعديل السعر من {{old}} إلى {{new}} ر.س",
+  "master_audit_log": "سجل المراجعة الرئيسي",
+  "master_audit_log_title": "سجل النظام الشامل (جميع المشرفين)",
+  "editor": "المحرر",
+  "published_status": "تم النشر",
+  "pending_status": "قيد الانتظار",
+  "price_shift_label": "تغيير السعر",
+  "full_enroll_msg": "اكتمل تسجيل الجهاز بالكامل.",
+  "device_remove_msg": "تمت إزالة الجهاز من المخزون."
 }

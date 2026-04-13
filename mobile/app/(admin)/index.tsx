@@ -11,6 +11,7 @@ import i18n from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSession } from '@/hooks/useSession';
 import * as Application from 'expo-application';
+import { handleLanguageToggle } from '../../utils/language';
 
 export default function AdminPhoneManagement() {
   const { t } = useTranslation();
@@ -26,6 +27,7 @@ export default function AdminPhoneManagement() {
   const [sortType, setSortType] = useState<'ID' | 'DATE'>('ID'); // Default: Alphabetical Ref
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Default: A-Z
   const { userId } = useSession() || {};
+  const [unreadCount, setUnreadCount] = useState(0);
 
 
   // --- NEW: FORM & MODAL STATES ---
@@ -33,7 +35,22 @@ export default function AdminPhoneManagement() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ id: '', name: '', brandId: null as number | null, price: '' });
 
-  
+  const checkNotifications = async () => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`${API_URL}/notifications/${userId}`);
+      const data = await res.json();
+      const unread = data.filter((n: any) => !n.isRead).length;
+      setUnreadCount(unread);
+    } catch (e) { console.log(e); }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      checkNotifications();
+    }, [userId])
+  );
+
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -55,34 +72,8 @@ export default function AdminPhoneManagement() {
   }, []);
 
 
-  const toggleLanguage = async () => {
-    const newLang = i18n.language === 'ar' ? 'en' : 'ar';
-    try {
-      await i18n.changeLanguage(newLang);
-      await AsyncStorage.setItem('user-language', newLang);
-      
-      const isArabic = newLang === 'ar';
-      I18nManager.allowRTL(isArabic);
-      I18nManager.forceRTL(isArabic);
-
-      const doRestart = async () => {
-        try {
-          await Updates.reloadAsync();
-        } catch (e) {
-          if (__DEV__) DevSettings.reload();
-          else Alert.alert("Manual Restart", "Please reopen the app to apply the layout.");
-        }
-      };
-
-      Alert.alert(
-        t('restart_required'), 
-        t('restart_msg'), 
-        [{ text: t('restart'), onPress: () => doRestart() }], 
-        { cancelable: false }
-      );
-    } catch (error) {
-      console.error("Language Error:", error);
-    }
+  const toggleLanguage = () => {
+    handleLanguageToggle(i18n, t, userId);
   };
 
   const handleSignOut = () => {
@@ -99,10 +90,13 @@ export default function AdminPhoneManagement() {
               : await Application.getIosIdForVendorAsync();
 
             // 2. Tell the server to stop sending pushes to this device
-            await fetch(`${API_URL}/logout`, {
+            await fetch(`${API_URL}/logout`, { // Make sure API_URL ends in /api
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId, deviceId })
+              body: JSON.stringify({ 
+                userId: Number(userId), // Ensure it's a number
+                deviceId: deviceId 
+              })
             });
           } catch (e) {
             console.log("Push token cleanup failed, logging out anyway.");
@@ -334,7 +328,18 @@ export default function AdminPhoneManagement() {
       
       {/* --- CONSOLE HEADER --- */}
       <View className="pt-14 px-6 pb-8 bg-slate-900">
-        <View className="absolute top-14 right-6 flex-row items-center space-x-3 gap-x-1.5">
+        <View className="absolute top-14 right-6 flex-row items-center gap-x-3">
+          {/* Notification Bell */}
+          <TouchableOpacity 
+            onPress={() => router.push({ pathname: '/(admin)/notifications', params: { userId } })}
+            className="p-2.5 bg-slate-800 rounded-xl border border-slate-700"
+          >
+            <Ionicons name="notifications" size={18} color="#fbbf24" />
+            {unreadCount > 0 && (
+              <View className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-slate-900" />
+            )}
+          </TouchableOpacity>
+
           {/* Language Toggle */}
           <TouchableOpacity 
             onPress={toggleLanguage}
@@ -342,7 +347,7 @@ export default function AdminPhoneManagement() {
           >
             <Ionicons name="globe-outline" size={18} color="#fbbf24" />
             <Text className="text-white font-black text-[10px] ml-2 uppercase">
-              {i18n.language === 'ar' ? 'English' : 'العربية'}
+              {i18n.language === 'ar' ? 'EN' : 'AR'}
             </Text>
           </TouchableOpacity>
 

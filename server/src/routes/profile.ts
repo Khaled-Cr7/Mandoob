@@ -24,6 +24,34 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// PUT /api/profile/language
+router.put('/language', async (req, res) => {
+  const { userId, language } = req.body;
+
+  try {
+    // This will tell us if the data even reached the server
+    console.log(`📡 Server received: UserID ${userId}, Lang ${language}`);
+
+    const updated = await prisma.user.update({
+      where: { id: Number(userId) },
+      data: { language: language }
+    });
+    
+    console.log("✅ Success!");
+    res.json({ success: true });
+  } catch (error: any) {
+    // THIS IS THE IMPORTANT PART
+    console.error("❌ PRISMA ERROR DETAILS:", error.code, error.message);
+    
+    res.status(400).json({ 
+      message: "Update failed", 
+      errorType: error.code, 
+      errorMessage: error.message 
+    });
+  }
+});
+
+
 
 
 // 1. GET USER DATA (For the Profile Page)
@@ -93,7 +121,7 @@ router.put('/:id', async (req, res) => {
 // This handles the actual file upload and database update for the profile picture.
 router.post('/avatar/:id', upload.single('avatar'), async (req, res) => {
   try {
-    const id = req.params.id as string;
+    const { id } = req.params as { id: string };
     
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded." });
@@ -108,13 +136,11 @@ router.post('/avatar/:id', upload.single('avatar'), async (req, res) => {
     // 2. DELETE OLD FILE (If it exists and isn't the default avatar)
     if (currentUser?.avatar && currentUser.avatar.includes('/uploads/')) {
       try {
-        // Extract the filename from the URL (e.g., "171234567.jpg")
         const oldFileName = currentUser.avatar.split('/').pop();
         const oldFilePath = path.join(__dirname, '../../uploads', oldFileName as string);
         
-        // Check if file exists before trying to delete
         if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath); // This deletes the file
+          fs.unlinkSync(oldFilePath);
           console.log("🗑️ Deleted old profile picture:", oldFileName);
         }
       } catch (err) {
@@ -122,20 +148,27 @@ router.post('/avatar/:id', upload.single('avatar'), async (req, res) => {
       }
     }
 
-    // 3. UPDATE TO NEW AVATAR
-    const avatarUrl = `http://10.124.176.131:3000/uploads/${req.file.filename}`;
+    // 3. DYNAMIC URL LOGIC (The "Magic" Part)
+    // This builds the URL based on the current request's IP and Port
+    const protocol = req.protocol; 
+    const host = req.get('host');  
+    const avatarUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
     
+    // 4. UPDATE DATABASE
     await prisma.user.update({
       where: { id: parseInt(id) },
       data: { avatar: avatarUrl }
     });
 
+    console.log(`📸 New avatar set: ${avatarUrl}`);
     res.json({ message: "Avatar updated", avatarUrl });
-  } catch (error) {
-    console.error("❌ Upload failed:", error);
+
+  } catch (error: any) {
+    console.error("❌ Upload failed:", error.message);
     res.status(500).json({ message: "Update failed" });
   }
 });
+
 
 
 export default router;

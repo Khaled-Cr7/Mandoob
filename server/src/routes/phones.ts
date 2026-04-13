@@ -53,11 +53,20 @@ router.delete('/brands/:id', async (req, res) => {
 // --- SYSTEM CHANGES LOGGING ROUTE ---
 router.get('/changes', async (req, res) => {
   const { userId } = req.query;
+  const isAdminOne = Number(userId) === 1;
+
   try {
     const changes = await prisma.systemChange.findMany({
-      where: { 
-        userId: Number(userId),
-        isPublished: false // 👈 ONLY GET UNPUBLISHED ROWS
+      where: isAdminOne 
+        ? {} // 👈 User 1 sees EVERYTHING
+        : { 
+            userId: Number(userId),
+            isPublished: false 
+          },
+      include: {
+        user: { // 👈 Include user info so we know WHO made the change
+          select: { name: true, role: true }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -95,14 +104,15 @@ router.delete('/changes/:id', async (req, res) => {
 // POST /api/phones/changes/:id/publish
 router.post('/changes/:id/publish', async (req, res) => {
   const { id } = req.params;
+  const { userId } = req.body;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
       const log = await tx.systemChange.findUnique({ where: { id: Number(id) } });
-      if (!log || log.isPublished) throw new Error("Log not found");
+      if (!log || log.isPublished) throw new Error("Log not found or already published");
 
-      // SAVE THE DATA, NOT THE SENTENCE
-      const notification = await tx.notification.create({
+      // 1. Create the persistent record for the in-app notification list
+      await tx.notification.create({
         data: { 
           type: log.type,
           modelName: log.modelName,
@@ -111,28 +121,17 @@ router.post('/changes/:id/publish', async (req, res) => {
         }
       });
 
-      await tx.systemChange.update({
+      // 2. Mark the draft as published so it disappears from "Pending Tasks"
+      const updatedLog = await tx.systemChange.update({
         where: { id: Number(id) },
         data: { isPublished: true }
       });
 
-      return notification;
+      return updatedLog; // Return the log so we have access to oldValue/newValue for the push
     });
 
-    // 📢 TRIGGER THE PUSH
-    let title = "Kunooz Update";
-    let body = "";
-
-    if (result.type === 'PRICE_UPDATE') {
-      body = `Price Drop! ${result.modelName} is now ${result.newPrice} SAR.`;
-    } else if (result.type === 'ADDED') {
-      body = `New Arrival: ${result.modelName} just landed in stock!`;
-    } else {
-      body = `Inventory check: ${result.modelName} status has changed.`;
-    }
-
-    // This sends to every active device in the UserDevice table
-    sendBroadcastNotification(title, body);
+    // 📢 Trigger push using the log data
+    sendBroadcastNotification(result, Number(userId));
 
     res.json({ message: "Published and Pushed" });
   } catch (error : any) {

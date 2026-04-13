@@ -11,6 +11,8 @@ import * as Updates from 'expo-updates'; // Fixed import
 import { DevSettings } from 'react-native';
 import { RefreshControl } from 'react-native';
 import { useSession } from '@/hooks/useSession';
+import { handleLanguageToggle } from '../../utils/language';
+import * as Application from 'expo-application';
 
 export default function ProfileScreen() {
   const { userId } = useSession();
@@ -31,43 +33,8 @@ export default function ProfileScreen() {
     setRefreshing(false);
   }, [userId]);
 
-  const changeLanguage = async (lang: string) => {
-    try {
-      const currentLang = i18n.language; 
-      if (currentLang === lang) return;
-
-      await i18n.changeLanguage(lang);
-      await AsyncStorage.setItem('user-language', lang);
-      
-      const isArabic = lang === 'ar';
-      I18nManager.allowRTL(isArabic);
-      I18nManager.forceRTL(isArabic);
-
-      const doRestart = async () => {
-        try {
-          // 1. Try the official way first
-          await Updates.reloadAsync();
-        } catch (e) {
-          // 2. FALLBACK: If Updates fails, use DevSettings (for Expo Go / Dev mode)
-          console.log("Updates.reloadAsync failed, trying DevSettings...");
-          if (__DEV__) {
-            DevSettings.reload(); 
-          } else {
-            Alert.alert("Manual Restart", "Please close and reopen the app to apply the Arabic layout.");
-          }
-        }
-      };
-
-      Alert.alert(
-        t('restart_required'), 
-        t('restart_msg'), 
-        [{ text: t('restart'), onPress: () => doRestart() }], 
-        { cancelable: false }
-      );
-
-    } catch (error) {
-      console.error("Error changing language:", error);
-    }
+  const toggleLanguage = (lang: string) => {
+    handleLanguageToggle(i18n, t, userId, lang);
   };
 
   const uploadImage = async (uri: string) => {
@@ -192,7 +159,31 @@ export default function ProfileScreen() {
   const handleSignOut = () => {
     Alert.alert(t('sign_out'), t('confirm_leave'), [
       { text: t('cancel'), style: "cancel" },
-      { text: t('sign_out'), style: "destructive", onPress: () => router.replace('/(auth)/login') }
+      { 
+        text: t('sign_out'), 
+        style: "destructive", 
+        onPress: async () => {
+          try {
+            // 1. Get the current deviceId
+            const deviceId = Platform.OS === 'android' 
+              ? await Application.getAndroidId() 
+              : await Application.getIosIdForVendorAsync();
+
+            // 2. Tell the server to stop sending pushes to this device
+            await fetch(`${API_URL}/logout`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, deviceId })
+            });
+          } catch (e) {
+            console.log("Push token cleanup failed, logging out anyway.");
+          } finally {
+            // 3. Always clear the local session and redirect
+            await AsyncStorage.removeItem('userId');
+            router.replace('/(auth)/login'); 
+          }
+        } 
+      }
     ]);
   };
 
@@ -225,17 +216,24 @@ export default function ProfileScreen() {
           <Text className="text-3xl font-black text-slate-900 mt-6 tracking-tighter">{user?.name}</Text>
 
           <View className="flex-row mt-4 gap-x-4 justify-center w-full">
+            {/* English Button */}
             <TouchableOpacity 
-              onPress={() => changeLanguage('en')}
-              className={`px-4 py-2 rounded-full ${i18n.language === 'en' ? 'bg-blue-600' : 'bg-slate-200'}`}
+              onPress={() => toggleLanguage('en')}
+              className={`px-6 py-2.5 rounded-full border ${i18n.language === 'en' ? 'bg-blue-600 border-blue-600 shadow-md' : 'bg-white border-slate-200'}`}
             >
-              <Text className={i18n.language === 'en' ? 'text-white' : 'text-slate-600 font-bold'}>English</Text>
+              <Text className={`font-black uppercase text-[10px] tracking-widest ${i18n.language === 'en' ? 'text-white' : 'text-slate-400'}`}>
+                English
+              </Text>
             </TouchableOpacity>
+
+            {/* Arabic Button */}
             <TouchableOpacity 
-              onPress={() => changeLanguage('ar')}
-              className={`px-4 py-2 rounded-full ${i18n.language === 'ar' ? 'bg-blue-600' : 'bg-slate-200'}`}
+              onPress={() => toggleLanguage('ar')}
+              className={`px-6 py-2.5 rounded-full border ${i18n.language === 'ar' ? 'bg-blue-600 border-blue-600 shadow-md' : 'bg-white border-slate-200'}`}
             >
-              <Text className={i18n.language === 'ar' ? 'text-white' : 'text-slate-600 font-bold'}>العربية</Text>
+              <Text className={`font-black uppercase text-[10px] tracking-widest ${i18n.language === 'ar' ? 'text-white' : 'text-slate-400'}`}>
+                العربية
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

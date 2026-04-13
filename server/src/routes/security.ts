@@ -39,9 +39,20 @@ router.put('/devices/:id/status', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status } = req.body as { status: DeviceStatus };
 
+    // Prepare the update data
+    const updateData: any = { status: status };
+
+    // 🛡️ SECURITY FIX: If Admin denies/bans the device, wipe the push token
+    // This prevents the device from receiving any future background notifications.
+    if (status === 'DENIED') {
+      updateData.pushToken = null;
+    }
+
+
+
     const updatedDevice = await prisma.userDevice.update({
       where: { id: Number(id) },
-      data: { status: status },
+      data: updateData,
     });
 
     // If Admin authorizes the device, clean up the validation code table
@@ -51,6 +62,7 @@ router.put('/devices/:id/status', async (req: Request, res: Response) => {
       });
     }
 
+    console.log(`🛡️ Device ${id} status changed to ${status}${status === 'DENIED' ? ' (Token Purged)' : ''}`);
     return res.json(updatedDevice);
   } catch (error) {
     console.error("Update Status Error:", error);

@@ -81,34 +81,30 @@ router.post('/mark-all-read', async (req, res) => {
 
 // POST /api/notifications/register-token
 router.post('/register-token', async (req, res) => {
-  const { userId, deviceId, pushToken, deviceName, deviceModel } = req.body;
+  const { userId, deviceId, pushToken } = req.body;
 
   try {
-    const device = await prisma.userDevice.upsert({
+    // updateMany is safer because it won't create a new 'ACTIVE' record 
+    // if the device doesn't already exist in the userDevice table.
+    const result = await prisma.userDevice.updateMany({
       where: {
-        userId_deviceId: {
-          userId: Number(userId),
-          deviceId: deviceId,
-        },
+        userId: Number(userId),
+        deviceId: String(deviceId),
       },
-      update: {
+      data: {
         pushToken: pushToken,
         lastUsed: new Date(),
       },
-      create: {
-        userId: Number(userId),
-        deviceId: deviceId,
-        pushToken: pushToken,
-        deviceName: deviceName,
-        deviceModel: deviceModel,
-        status: 'ACTIVE', // Or PENDING if you want to manually approve devices
-      },
     });
 
-    res.json({ success: true, device });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to register device token" });
+    if (result.count === 0) {
+      console.log(`⚠️ No device found for UID ${userId} to sync token.`);
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error("Token Register Error:", error.message);
+    res.status(500).json({ error: "Failed to sync token" });
   }
 });
 
