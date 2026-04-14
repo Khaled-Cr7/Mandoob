@@ -11,6 +11,7 @@ import i18n from '@/i18n';
 import * as Updates from 'expo-updates';
 import * as Application from 'expo-application';
 import { handleLanguageToggle } from '../../utils/language';
+import { useSession } from '@/hooks/useSession';
 
 export default function PersonnelManagement() {
   const params = useLocalSearchParams();
@@ -28,43 +29,12 @@ export default function PersonnelManagement() {
   const [copiedUser, setCopiedUser] = useState(false);
   const [copiedPass, setCopiedPass] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const { confirmSignOut } = useSession();
 
 
   const toggleLanguage = () => {
     handleLanguageToggle(i18n, t, userId);
-  };
-
-  const handleSignOut = () => {
-    Alert.alert(t('sign_out'), t('confirm_leave'), [
-      { text: t('cancel'), style: "cancel" },
-      { 
-        text: t('sign_out'), 
-        style: "destructive", 
-        onPress: async () => {
-          try {
-            // 1. Get the current deviceId
-            const deviceId = Platform.OS === 'android' 
-              ? await Application.getAndroidId() 
-              : await Application.getIosIdForVendorAsync();
-
-            // 2. Tell the server to stop sending pushes to this device
-            await fetch(`${API_URL}/logout`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId, deviceId })
-            });
-          } catch (e) {
-            console.log("Push token cleanup failed, logging out anyway.");
-          } finally {
-            // 3. Always clear the local session and redirect
-            await AsyncStorage.removeItem('userId');
-            router.replace('/(auth)/login'); 
-          }
-        } 
-      }
-    ]);
-  };
-
+  }
 
   const onRefresh = useCallback(async () => {
       setRefreshing(true);
@@ -257,7 +227,7 @@ export default function PersonnelManagement() {
 
           {/* Logout Button */}
           <TouchableOpacity 
-            onPress={handleSignOut}
+            onPress={confirmSignOut}
             className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20"
           >
             <Ionicons name="log-out-outline" size={18} color="#ef4444" />

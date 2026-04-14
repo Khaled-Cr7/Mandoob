@@ -28,6 +28,7 @@ export default function AdminPhoneManagement() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Default: A-Z
   const { userId } = useSession() || {};
   const [unreadCount, setUnreadCount] = useState(0);
+  const { confirmSignOut } = useSession();
 
 
   // --- NEW: FORM & MODAL STATES ---
@@ -75,42 +76,7 @@ export default function AdminPhoneManagement() {
   const toggleLanguage = () => {
     handleLanguageToggle(i18n, t, userId);
   };
-
-  const handleSignOut = () => {
-    Alert.alert(t('sign_out'), t('confirm_leave'), [
-      { text: t('cancel'), style: "cancel" },
-      { 
-        text: t('sign_out'), 
-        style: "destructive", 
-        onPress: async () => {
-          try {
-            // 1. Get the current deviceId
-            const deviceId = Platform.OS === 'android' 
-              ? await Application.getAndroidId() 
-              : await Application.getIosIdForVendorAsync();
-
-            // 2. Tell the server to stop sending pushes to this device
-            await fetch(`${API_URL}/logout`, { // Make sure API_URL ends in /api
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                userId: Number(userId), // Ensure it's a number
-                deviceId: deviceId 
-              })
-            });
-          } catch (e) {
-            console.log("Push token cleanup failed, logging out anyway.");
-          } finally {
-            // 3. Always clear the local session and redirect
-            await AsyncStorage.removeItem('userId');
-            router.replace('/(auth)/login'); 
-          }
-        } 
-      }
-    ]);
-  };
-
-
+  
   const fetchPhones = async () => {
     setLoading(true);
     try {
@@ -353,7 +319,7 @@ export default function AdminPhoneManagement() {
 
           {/* Logout Button */}
           <TouchableOpacity 
-            onPress={handleSignOut}
+            onPress={confirmSignOut}
             className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20"
           >
             <Ionicons name="log-out-outline" size={18} color="#ef4444" />

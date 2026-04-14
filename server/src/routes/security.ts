@@ -74,28 +74,36 @@ router.get('/check-status', async (req, res) => {
   const { deviceId, userId } = req.query;
 
   try {
-    // 1. Get device and user role
-    const device = await prisma.userDevice.findUnique({
-      where: { deviceId: String(deviceId) },
+    // Search using both pieces of info to ensure we get the EXACT record
+    const device = await prisma.userDevice.findFirst({
+      where: { 
+        deviceId: String(deviceId),
+        userId: Number(userId)
+      },
       include: {
         user: { select: { role: true } }
       }
     });
 
-    if (!device) return res.status(404).json({ message: "Device not found" });
+    if (!device) {
+      console.log(`⚠️ Status check failed: No record for User ${userId} on Device ${deviceId}`);
+      return res.status(404).json({ status: 'NOT_FOUND', message: "Device not found" });
+    }
 
-    // 2. Get the expiry time for the current active code
+    // This is for your OTP screen countdown
     const otpRecord = await prisma.validationCode.findUnique({
       where: { userId: Number(userId) }
     });
 
+    console.log(`🔍 Status Check: User ${userId} is currently ${device.status}`);
+
     res.json({
-      status: device.status,
+      status: device.status, // This should now correctly return 'DENIED'
       role: device.user.role,
       expiresAt: otpRecord ? otpRecord.expiresAt : null 
     });
-  } catch (e) {
-    console.error("Status Check Error:", e);
+  } catch (e: any) {
+    console.error("❌ Status Check Error:", e.message);
     res.status(500).json({ message: "Server error" });
   }
 });

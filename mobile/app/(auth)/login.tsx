@@ -88,12 +88,9 @@ export default function LoginScreen() {
           params: { userId: String(data.id), deviceId: deviceData.deviceId } 
         });
       } else {
-        // Standard successful login (No OTP needed)
-        if (data.role === 'ADMIN') {
-          router.replace('/(admin)');
-        } else {
-          router.replace('/(user)');
-        }
+        // Standard successful login
+        const target = data.role === 'ADMIN' ? '/(admin)' : '/(user)';
+        router.replace(target);
       }
     } else {
       // --- THIS IS WHERE THE ERROR LOGIC LIVES ---

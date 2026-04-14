@@ -177,5 +177,6 @@
   "pending_status": "PENDING",
   "price_shift_label": "Price shift",
   "full_enroll_msg": "Full device registration completed.",
-  "device_remove_msg": "Device removed from inventory."
+  "device_remove_msg": "Device removed from inventory.",
+  "revoked_msg": "Your device access has been revoked by an administrator. You will be logged out."
 }

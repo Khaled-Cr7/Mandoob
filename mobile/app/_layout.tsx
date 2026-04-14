@@ -1,14 +1,19 @@
-import { Stack } from "expo-router";
-import "./globals.css"
+import { Stack, useSegments } from "expo-router";
+import "./globals.css";
 import "../i18n"; 
-import { useEffect, useState } from 'react'; // Added useState
-import { I18nManager, Alert } from 'react-native';
+import { useEffect, useState } from 'react';
+import { I18nManager, Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
 import * as Notifications from 'expo-notifications';
-import { syncPushToken } from '../utils/push'; // Import your helper
-import { useSession } from '@/hooks/useSession'; // Use your existing session hook
+import { syncPushToken } from '../utils/push'; 
+import { useSession } from '@/hooks/useSession'; 
+import * as Application from 'expo-application';
+import { API_URL } from '../constants';
+import { useTranslation } from 'react-i18next';
+import i18n from "../i18n";
 
+// --- Global Config & State ---
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -19,10 +24,94 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export default function RootLayout() {
-  const { userId, loading } = useSession();
+let globalAlertActive = false;
 
-  // --- 1. Notification Listener ---
+export default function RootLayout() {
+  const { userId, loading, logout } = useSession();
+  const { t } = useTranslation();
+  const segments = useSegments();
+  const [isReady, setIsReady] = useState(false);
+
+  // --- 1. Startup Sync (Language & RTL) ---
+  useEffect(() => {
+    const initializeLayout = async () => {
+      try {
+        const savedLang = await AsyncStorage.getItem('user-language');
+        if (savedLang) {
+          // Set the text language
+          await i18n.changeLanguage(savedLang);
+
+          // Check if Native RTL matches saved language
+          const shouldBeRTL = savedLang === 'ar';
+          if (I18nManager.isRTL !== shouldBeRTL) {
+            I18nManager.allowRTL(shouldBeRTL);
+            I18nManager.forceRTL(shouldBeRTL);
+            
+            // Re-boot to apply the side flip
+            await Updates.reloadAsync();
+            return; 
+          }
+        }
+      } catch (e) {
+        console.log("Layout sync failed:", e);
+      } finally {
+        setIsReady(true);
+      }
+    };
+    initializeLayout();
+  }, []);
+
+  // --- 2. Guardian Heartbeat (Security Check) ---
+  useEffect(() => {
+    if (loading || !userId) return;
+
+    const currentPath = segments[0] as string;
+    const isAuthGroup = currentPath === '(auth)' || currentPath === 'login' || currentPath === 'otp';
+    if (isAuthGroup) return;
+
+    let intervalId: any;
+
+    const startGuardian = async () => {
+      const deviceId = Platform.OS === 'android' 
+        ? await Application.getAndroidId() 
+        : await Application.getIosIdForVendorAsync();
+
+      const check = async () => {
+        if (globalAlertActive) return;
+
+        try {
+          const res = await fetch(`${API_URL}/security/check-status?deviceId=${deviceId}&userId=${userId}`);
+          if (!res.ok) return;
+
+          const data = await res.json();
+          if (data.status === 'DENIED') {
+            globalAlertActive = true;
+            Alert.alert(t('access_denied'), t('revoked_msg'), [
+              { 
+                text: "OK", 
+                onPress: async () => {
+                  await logout();
+                  globalAlertActive = false;
+                } 
+              }
+            ], { cancelable: false });
+          } else if (data.status === 'ACTIVE') {
+            syncPushToken(Number(userId));
+          }
+        } catch (e) {
+          console.log("Guardian check failed");
+        }
+      };
+
+      await check();
+      intervalId = setInterval(check, 60000); 
+    };
+
+    startGuardian();
+    return () => clearInterval(intervalId);
+  }, [userId, loading, segments]);
+
+  // --- 3. Push Notification Listener ---
   useEffect(() => {
     const subscription = Notifications.addNotificationReceivedListener(notification => {
       Alert.alert(
@@ -33,42 +122,17 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
-  // --- 2. Push Token Sync (The New Part) ---
-  useEffect(() => {
-    // Only sync if we are done loading and we actually have a user
-    if (!loading && userId) {
-      console.log("🚀 RootLayout: Syncing push token for user", userId);
-      syncPushToken(Number(userId));
-    }
-  }, [userId, loading]); // Fires when loading finishes OR userId changes
-
-  // --- 3. RTL / Language Startup Sync ---
-  useEffect(() => {
-    const syncLayoutAtStartup = async () => {
-      try {
-        const savedLang = await AsyncStorage.getItem('user-language');
-        const shouldBeRTL = savedLang === 'ar';
-
-        if (I18nManager.isRTL !== shouldBeRTL) {
-          I18nManager.allowRTL(shouldBeRTL);
-          I18nManager.forceRTL(shouldBeRTL);
-          
-          await Updates.reloadAsync().catch(() => {
-             console.log("Startup reload failed - Manual restart may be needed");
-          });
-        }
-      } catch (err) {
-        console.error("Layout sync error:", err);
-      }
-    };
-    syncLayoutAtStartup();
-  }, []);
+  // --- 4. Render Logic ---
+  // We wait for isReady to be true so the Stack doesn't load with the wrong RTL direction
+  if (!isReady || loading) {
+    return null; 
+  }
 
   return (
-    <Stack screenOptions={{ headerShown: false }} initialRouteName="(user)">
+    <Stack screenOptions={{ headerShown: false }} initialRouteName="(auth)/login">
       <Stack.Screen name="(auth)/login" />
       <Stack.Screen name="(admin)" />
-      <Stack.Screen name="(user)" />  
+      <Stack.Screen name="(user)" />   
     </Stack>
   );
 }

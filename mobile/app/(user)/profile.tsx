@@ -25,6 +25,8 @@ export default function ProfileScreen() {
   const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [refreshing, setRefreshing] = useState(false);
 
+  const { confirmSignOut } = useSession();
+
   const { t, i18n } = useTranslation();
 
   const onRefresh = useCallback(async () => {
@@ -33,9 +35,10 @@ export default function ProfileScreen() {
     setRefreshing(false);
   }, [userId]);
 
-  const toggleLanguage = (lang: string) => {
-    handleLanguageToggle(i18n, t, userId, lang);
+  const toggleLanguage = async (lang: string) => {
+    await handleLanguageToggle(i18n, t, userId, lang);
   };
+
 
   const uploadImage = async (uri: string) => {
     const formData = new FormData();
@@ -156,39 +159,9 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSignOut = () => {
-    Alert.alert(t('sign_out'), t('confirm_leave'), [
-      { text: t('cancel'), style: "cancel" },
-      { 
-        text: t('sign_out'), 
-        style: "destructive", 
-        onPress: async () => {
-          try {
-            // 1. Get the current deviceId
-            const deviceId = Platform.OS === 'android' 
-              ? await Application.getAndroidId() 
-              : await Application.getIosIdForVendorAsync();
 
-            // 2. Tell the server to stop sending pushes to this device
-            await fetch(`${API_URL}/logout`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId, deviceId })
-            });
-          } catch (e) {
-            console.log("Push token cleanup failed, logging out anyway.");
-          } finally {
-            // 3. Always clear the local session and redirect
-            await AsyncStorage.removeItem('userId');
-            router.replace('/(auth)/login'); 
-          }
-        } 
-      }
-    ]);
-  };
-
-  if (loading) return (
-    <View className="flex-1 justify-center bg-white">
+  if ( loading ) return (
+    <View className="flex-1 justify-center items-center bg-white">
       <ActivityIndicator size="large" color="#3b82f6" />
     </View>
   );
@@ -268,7 +241,7 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={18} color="#cbd5e1" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleSignOut} className="bg-red-50 flex-row items-center justify-between p-6 rounded-[30px] border border-red-100 mt-4 mb-20">
+        <TouchableOpacity onPress={confirmSignOut} className="bg-red-50 flex-row items-center justify-between p-6 rounded-[30px] border border-red-100 mt-4 mb-20">
           <View className="flex-row items-center">
             <View className="bg-white p-3 rounded-2xl mr-4 shadow-sm"><Ionicons name="log-out" size={18} color="#ef4444" /></View>
             <Text className="text-red-600 font-black text-sm">{t('sign_out')}</Text>
