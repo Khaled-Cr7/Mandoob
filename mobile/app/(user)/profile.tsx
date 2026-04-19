@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoiding
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, useRouter } from 'expo-router'; 
 import * as ImagePicker from 'expo-image-picker';
-import { API_URL } from '../../constants';
+import { API_URL, BASE_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
 import { I18nManager } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -56,7 +56,6 @@ export default function ProfileScreen() {
       setLoading(true);
       const response = await fetch(`${API_URL}/profile/avatar/${userId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'multipart/form-data' },
         body: formData,
       });
 
@@ -177,7 +176,15 @@ export default function ProfileScreen() {
         <View className="items-center">
           <View className="relative">
             <View className="border-2 border-blue-500/10 rounded-full p-1.5">
-              <Image source={{ uri: user?.avatar }} className="w-28 h-28 rounded-full shadow-lg" />
+             <Image 
+              source={{ 
+                uri: user?.avatar && user.avatar.includes('/uploads/')
+                  ? `${BASE_URL}${user.avatar}` 
+                  : user?.avatar               
+              }} 
+              className="w-28 h-28 rounded-full shadow-lg" 
+              style={{ backgroundColor: '#f1f5f9' }} // Background shows if image is loading
+            />
             </View>
             <TouchableOpacity 
               onPress={() => setUploadModalVisible(true)}
@@ -186,7 +193,7 @@ export default function ProfileScreen() {
               <Ionicons name="camera" size={16} color="#3b82f6" />
             </TouchableOpacity>
           </View>
-          <Text className="text-3xl font-black text-slate-900 mt-6 tracking-tighter">{user?.name}</Text>
+          <Text className="text-3xl font-black text-slate-900 mt-6">{user?.name}</Text>
 
           <View className="flex-row mt-4 gap-x-4 justify-center w-full">
             {/* English Button */}

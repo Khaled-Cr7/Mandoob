@@ -164,7 +164,7 @@
   "view_system_logs": " عرض سجلات التغيير",
   "delete_log_confirm": "هل أنت متأكد من حذف سجل التغيير هذا؟ لا يمكن التراجع عن هذه الخطوة.",
   "notification_sent": "تم إرسال التنبيه لجميع المستخدمين بنجاح.",
-  "notif_price_change": "تغير سعر {{model}} من {{old}} إلى {{new}} ريال",
+  "notif_price_change": "\u2067{{model}}\u2069 أصبح الآن \u2067{{new}}\u2069 ر.س",
   "notif_added": "تم إضافة {{model}} إلى المخزون!",
   "notif_deleted": "{{model}} لم يعد متوفراً حالياً",
   "my_pending_tasks": "مهامي المعلقة",

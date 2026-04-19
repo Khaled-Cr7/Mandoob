@@ -18,47 +18,43 @@ export async function sendBroadcastNotification(log: any, excludeUserId?: number
   const messages: ExpoPushMessage[] = [];
 
   for (const device of devices) {
-    if (!Expo.isExpoPushToken(device.pushToken)) continue;
+    if (!device.pushToken || !Expo.isExpoPushToken(device.pushToken)) continue;
 
     const lang = device.user.language || 'en';
-    let title = lang === 'ar' ? "تحديث كنوز" : "Kunooz Update";
+    const isArabic = lang === 'ar';
+
+    let title = isArabic ? "تحديث كنوز" : "Kunooz Update";
     let body = "";
 
-    // 2. SMART MESSAGE LOGIC
+    // Strictly using the types from your original code
     if (log.type === 'PRICE_UPDATE') {
-      const isDrop = parseFloat(log.newPrice!) < parseFloat(log.oldPrice!);
-      
-      if (lang === 'ar') {
-        body = isDrop 
-          ? `انخفاض السعر! ${log.modelName} الآن بـ ${log.newPrice} ر.س`
-          : `تحديث السعر: ${log.modelName} أصبح ${log.newPrice} ر.س`;
-      } else {
-        body = isDrop 
-          ? `Price Drop! ${log.modelName} is now ${log.newPrice} SAR`
-          : `Price Update: ${log.modelName} is now ${log.newPrice} SAR`;
-      }
+      body = isArabic 
+        ? `تحديث السعر: ${log.modelName} أصبح ${log.newValue} ر.س`
+        : `Price Update: ${log.modelName} is now ${log.newValue} SAR`;
     } else if (log.type === 'ADDED') {
-      body = lang === 'ar' 
+      body = isArabic 
         ? `وصول جديد: ${log.modelName} متوفر الآن!` 
         : `New Arrival: ${log.modelName} is now available!`;
     }
 
-    messages.push({
-      to: device.pushToken,
-      sound: 'default',
-      title,
-      body,
-      data: { modelName: log.modelName },
-    });
+    if (body) {
+      messages.push({
+        to: device.pushToken,
+        sound: 'default',
+        title,
+        body,
+        data: { modelName: log.modelName },
+      });
+    }
   }
 
-  // 3. Chunk and Send
+  // Chunk and Send
   let chunks = expo.chunkPushNotifications(messages);
   for (let chunk of chunks) {
     try {
       await expo.sendPushNotificationsAsync(chunk);
     } catch (error) {
-      console.error("Push Error:", error);
+      console.error("❌ Push Error:", error);
     }
   }
 }

@@ -96,7 +96,6 @@ export default function SystemChangesScreen() {
   const getTypeStyles = (type: string) => {
     switch (type) {
       case 'ADDED': return { bg: 'bg-emerald-50', text: 'text-emerald-600', icon: 'add-circle' as any };
-      case 'DELETED': return { bg: 'bg-red-50', text: 'text-red-600', icon: 'trash' as any };
       case 'PRICE_UPDATE': return { bg: 'bg-blue-50', text: 'text-blue-600', icon: 'pricetag' as any };
       default: return { bg: 'bg-slate-50', text: 'text-slate-600', icon: 'help' as any };
     }

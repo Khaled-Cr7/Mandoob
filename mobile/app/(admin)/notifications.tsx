@@ -24,13 +24,10 @@ export default function NotificationListScreen() {
       case 'PRICE_UPDATE':
         return t('notif_price_change', { 
           model: item.modelName, 
-          old: item.oldPrice, 
           new: item.newPrice 
         });
       case 'ADDED':
         return t('notif_added', { model: item.modelName });
-      case 'DELETED':
-        return t('notif_deleted', { model: item.modelName });
       default:
         return item.message || "";
     }
@@ -40,7 +37,6 @@ export default function NotificationListScreen() {
   const getIconConfig = (type: string, isRead: boolean) => {
     switch (type) {
       case 'ADDED': return { name: 'add-circle' as any, color: isRead ? '#94a3b8' : '#10b981' };
-      case 'DELETED': return { name: 'trash' as any, color: isRead ? '#94a3b8' : '#ef4444' };
       case 'PRICE_UPDATE': return { name: 'pricetag' as any, color: isRead ? '#94a3b8' : '#3b82f6' };
       default: return { name: 'notifications' as any, color: isRead ? '#94a3b8' : '#3b82f6' };
     }

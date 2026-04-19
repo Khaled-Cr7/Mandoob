@@ -13,7 +13,6 @@ enum Role {
 
 enum ChangeType {
   ADDED
-  DELETED
   PRICE_UPDATE
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, Image, Modal, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, I18nManager, DevSettings } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { API_URL } from '../../constants';
+import { API_URL, BASE_URL } from '../../constants';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
@@ -280,7 +280,14 @@ export default function PersonnelManagement() {
             >
               <View className="flex-row items-center flex-1 mr-4">
                 <View className="border-2 border-slate-100 rounded-full p-0.5">
-                  <Image source={{ uri: item.avatar }} className="w-12 h-12 rounded-full" />
+                  <Image 
+                    source={{ 
+                      uri: item?.avatar && item.avatar.includes('/uploads/')
+                        ? `${BASE_URL}${item.avatar}` 
+                        : item?.avatar               
+                    }} 
+                    className="w-12 h-12 rounded-full"
+                  />
                 </View>
                 <View className="ml-4 flex-1">
                   <Text className="text-lg font-black text-slate-900 leading-5" style={{ flexShrink: 1 }}>{item.name}</Text>
@@ -329,7 +336,14 @@ export default function PersonnelManagement() {
               <View className="flex-row min-h-[220px]">
                 {/* LEFT SIDE: Identity & Phone */}
                 <View className="flex-1 justify-center items-center p-4 bg-slate-50/80">
-                  <Image source={{ uri: selectedUser?.avatar }} className="w-20 h-20 rounded-full border-4 border-white mb-3" />
+                  <Image 
+                  source={{ 
+                    uri: selectedUser?.avatar && selectedUser.avatar.includes('/uploads/')
+                      ? `${BASE_URL}${selectedUser.avatar}` 
+                      : selectedUser?.avatar               
+                  }} 
+                  className="w-20 h-20 rounded-full border-4 border-white mb-3" 
+                  />
                   <Text className="text-lg font-black text-slate-900 text-center leading-5">{selectedUser?.name}</Text>
                   <Text className="text-[10px] font-bold text-slate-500 mt-2">{selectedUser?.phoneNumber}</Text>
                 </View>

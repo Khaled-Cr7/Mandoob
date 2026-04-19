@@ -117,8 +117,7 @@ router.put('/:id', async (req, res) => {
 });
 
 
-// 3. NEW ROUTE: UPDATE AVATAR
-// This handles the actual file upload and database update for the profile picture.
+// 3. UPDATED ROUTE: UPDATE AVATAR (Storing Relative Path)
 router.post('/avatar/:id', upload.single('avatar'), async (req, res) => {
   try {
     const { id } = req.params as { id: string };
@@ -133,35 +132,41 @@ router.post('/avatar/:id', upload.single('avatar'), async (req, res) => {
       select: { avatar: true }
     });
 
-    // 2. DELETE OLD FILE (If it exists and isn't the default avatar)
+    // 2. DELETE OLD FILE
+    // Now we check if it includes '/uploads/' regardless of the domain
     if (currentUser?.avatar && currentUser.avatar.includes('/uploads/')) {
       try {
-        const oldFileName = currentUser.avatar.split('/').pop();
-        const oldFilePath = path.join(__dirname, '../../uploads', oldFileName as string);
+        // Extract just the filename even if it's a full URL or a relative path
+        const segments = currentUser.avatar.split('/');
+        const fileName = segments[segments.length - 1];
+        const filePath = path.join(__dirname, '../../uploads', fileName);
         
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
-          console.log("🗑️ Deleted old profile picture:", oldFileName);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log("🗑️ Deleted old profile picture:", fileName);
         }
       } catch (err) {
-        console.error("⚠️ Failed to delete old file, continuing anyway:", err);
+        console.error("⚠️ Cleanup failed, continuing:", err);
       }
     }
 
-    // 3. DYNAMIC URL LOGIC (The "Magic" Part)
-    // This builds the URL based on the current request's IP and Port
-    const protocol = req.protocol; 
-    const host = req.get('host');  
-    const avatarUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+    // 3. THE FIX: SAVE ONLY THE RELATIVE PATH
+    // We stop using req.protocol and host. We just save the path.
+    const relativePath = `/uploads/${req.file.filename}`;
     
     // 4. UPDATE DATABASE
     await prisma.user.update({
       where: { id: parseInt(id) },
-      data: { avatar: avatarUrl }
+      data: { avatar: relativePath } // Stores: "/uploads/12345.jpg"
     });
 
-    console.log(`📸 New avatar set: ${avatarUrl}`);
-    res.json({ message: "Avatar updated", avatarUrl });
+    console.log(`📸 New avatar path saved: ${relativePath}`);
+    
+    // Return the relative path. Your frontend will combine this with API_URL
+    res.json({ 
+      message: "Avatar updated", 
+      avatarUrl: relativePath 
+    });
 
   } catch (error: any) {
     console.error("❌ Upload failed:", error.message);

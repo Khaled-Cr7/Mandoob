@@ -164,7 +164,7 @@
   "view_system_logs": "View System Logs",
   "delete_log_confirm": "Are you sure you want to remove this log entry? This cannot be undone.",
   "notification_sent": "Notification has been broadcasted to all users.",
-  "notif_price_change": "{{model}} price shifted from {{old}} to {{new}} SAR",
+  "notif_price_change": "{{model}} is now {{new}} SAR",
   "notif_added": "{{model}} has been added to inventory!",
   "notif_deleted": "{{model}} is no longer available",
   "my_pending_tasks": "My Pending Tasks",

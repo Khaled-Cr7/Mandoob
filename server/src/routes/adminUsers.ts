@@ -43,8 +43,8 @@ router.post('/', async (req, res) => {
     // For Admins, you mentioned no profile pic. 
     // We can still give them a generic one, or just a placeholder.
     const avatar = targetRole === 'ADMIN' 
-      ? `https://ui-avatars.com/api/?name=Admin&background=475569&color=fff` 
-      : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fbbf24`;
+  ? `https://ui-avatars.com/api/?name=Admin&background=475569&color=fff` 
+  : encodeURI(`https://ui-avatars.com/api/?name=${name}&background=0f172a&color=fbbf24`);
 
     const newUser = await prisma.user.create({
       data: { name, username: username.toLowerCase().trim(), password, avatar, phoneNumber, role: targetRole }

@@ -149,23 +149,19 @@ router.post('/changes/:id/publish', async (req, res) => {
 // DELETE PHONE
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
-  const { userId } = req.body; // Front-end must send { "userId": ... } in the body
-
+  
   try {
     const phoneToDelete = await prisma.phone.findUnique({ where: { id } });
     
-    if (phoneToDelete) {
-      await prisma.systemChange.create({
-        data: {
-          type: 'DELETED',
-          modelName: phoneToDelete.name,
-          userId: Number(userId),
-        }
-      });
-      await prisma.phone.delete({ where: { id } });
+    if (!phoneToDelete) {
+      return res.status(404).json({ message: "Phone not found" });
     }
+
+    await prisma.phone.delete({ where: { id } });
+    
     res.json({ message: "Phone deleted successfully" });
   } catch (error) {
+    console.error("Delete Error:", error);
     res.status(400).json({ message: "Delete failed" });
   }
 });

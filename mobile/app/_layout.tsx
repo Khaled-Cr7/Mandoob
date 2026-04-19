@@ -81,30 +81,38 @@ export default function RootLayout() {
 
         try {
           const res = await fetch(`${API_URL}/security/check-status?deviceId=${deviceId}&userId=${userId}`);
-          if (!res.ok) return;
+          
+          // If the server itself is down, we don't kick them (be merciful)
+          if (res.status >= 500) return; 
 
           const data = await res.json();
-          if (data.status === 'DENIED') {
+
+          // 🛡️ Kick if DENIED or if the account/device no longer exists
+          if (data.status === 'DENIED' || data.status === 'NOT_FOUND') {
             globalAlertActive = true;
-            Alert.alert(t('access_denied'), t('revoked_msg'), [
-              { 
+            
+            Alert.alert(
+              t('access_denied'), 
+              data.status === 'NOT_FOUND' ? t('account_deleted_msg') : t('revoked_msg'), 
+              [{ 
                 text: "OK", 
                 onPress: async () => {
-                  await logout();
+                  await logout(); // This clears AsyncStorage and state
                   globalAlertActive = false;
                 } 
-              }
-            ], { cancelable: false });
+              }], 
+              { cancelable: false }
+            );
           } else if (data.status === 'ACTIVE') {
             syncPushToken(Number(userId));
           }
         } catch (e) {
-          console.log("Guardian check failed");
+          console.log("Guardian heartbeat: Network error, retrying later...");
         }
       };
 
       await check();
-      intervalId = setInterval(check, 60000); 
+      intervalId = setInterval(check, 10000); 
     };
 
     startGuardian();
