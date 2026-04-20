@@ -13,6 +13,62 @@ import * as Application from 'expo-application';
 import { handleLanguageToggle } from '../../utils/language';
 import { useSession } from '@/hooks/useSession';
 
+const UserAvatar = ({ item, baseUrl }: { item: any, baseUrl: string }) => {
+  const [loading, setLoading] = useState(false); // Default to false
+  const [error, setError] = useState(false);
+
+  // Re-calculate the URI logic
+  const initialUri = item?.avatar?.includes('/uploads/')
+    ? `${baseUrl}${item.avatar}`
+    : item?.avatar;
+
+  const fallbackUri = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || 'User')}&background=0f172a&color=fbbf24`;
+
+  useEffect(() => {
+    // Only show loading if we are actually trying to fetch a real upload
+    if (initialUri && initialUri.includes('/uploads/')) {
+      setLoading(true);
+    } else {
+      setLoading(false);
+    }
+    setError(false);
+  }, [item?.avatar]);
+
+  return (
+    <View className="w-12 h-12 rounded-full overflow-hidden justify-center items-center bg-slate-100">
+      <Image
+        key={item?.avatar} 
+        source={{ 
+          uri: error || !initialUri ? fallbackUri : encodeURI(initialUri) 
+        }}
+        className="w-12 h-12 rounded-full"
+        onLoadStart={() => {
+            // Only start spinner if it's not the fallback
+            if (!error && initialUri?.includes('/uploads/')) setLoading(true);
+        }}
+        onLoad={() => setLoading(false)}
+        onLoadEnd={() => setLoading(false)}
+        onError={() => {
+          setError(true);
+          setLoading(false); 
+        }}
+        style={{ backgroundColor: '#f1f5f9' }}
+      />
+      
+      {/* 🛡️ Final Guard: If it's a fallback or we had an error, NEVER show spinner */}
+      {loading && !error && !(!initialUri || error) && (
+        <ActivityIndicator 
+          size="small" 
+          color="#94a3b8" 
+          style={{ position: 'absolute' }} 
+        />
+      )}
+    </View>
+  );
+};
+
+
+
 export default function PersonnelManagement() {
   const params = useLocalSearchParams();
   const userId = params.userId || "11";
@@ -158,7 +214,10 @@ export default function PersonnelManagement() {
     // Create a copy of the data and lowercase the username
     const normalizedData = {
       ...formData,
-      username: formData.username.toLowerCase().trim()
+      name: formData.name.trim(),
+      username: formData.username.toLowerCase().trim(),
+      phoneNumber: formData.phoneNumber.trim()
+
     };
 
     try {
@@ -205,6 +264,7 @@ export default function PersonnelManagement() {
     setShowPassword(false);
     setIsModalVisible(true);
   };
+
 
   return (
     <View className="flex-1 bg-slate-900">
@@ -272,7 +332,6 @@ export default function PersonnelManagement() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
           }
           renderItem={({ item }: any) => (
-            // WRAP IN TOUCHABLE TO OPEN VIEW BOX
             <TouchableOpacity 
               onPress={() => { setSelectedUser(item); setViewModalVisible(true); }}
               activeOpacity={0.7}
@@ -280,31 +339,27 @@ export default function PersonnelManagement() {
             >
               <View className="flex-row items-center flex-1 mr-4">
                 <View className="border-2 border-slate-100 rounded-full p-0.5">
-                  <Image 
-                    source={{ 
-                      uri: item?.avatar && item.avatar.includes('/uploads/')
-                        ? `${BASE_URL}${item.avatar}` 
-                        : item?.avatar               
-                    }} 
-                    className="w-12 h-12 rounded-full"
-                  />
+                  {/* Use the new component here */}
+                  <UserAvatar item={item} baseUrl={BASE_URL} />
                 </View>
                 <View className="ml-4 flex-1">
-                  <Text className="text-lg font-black text-slate-900 leading-5" style={{ flexShrink: 1 }}>{item.name}</Text>
-                  <Text className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">{item.username}</Text>
+                  <Text className="text-lg font-black text-slate-900 leading-5">{item.name}</Text>
+                  <Text className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">
+                    {item.username}
+                  </Text>
                 </View>
               </View>
 
-              {/* ACTION BUTTONS (Pencil and Trash) */}
-              <View className="flex-row space-x-1">
-                <TouchableOpacity onPress={() => handleOpenEdit(item)} className="p-2.5 bg-slate-900 rounded-xl shadow-lg">
-                  <Ionicons name="pencil" size={14} color="#fbbf24" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(item.id, item.name)} className="p-2.5 bg-red-50 rounded-xl border border-red-100">
-                  <Ionicons name="trash" size={14} color="#ef4444" />
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
+                {/* ACTION BUTTONS (Pencil and Trash) */}
+                <View className="flex-row space-x-1">
+                  <TouchableOpacity onPress={() => handleOpenEdit(item)} className="p-2.5 bg-slate-900 rounded-xl shadow-lg">
+                    <Ionicons name="pencil" size={14} color="#fbbf24" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(item.id, item.name)} className="p-2.5 bg-red-50 rounded-xl border border-red-100">
+                    <Ionicons name="trash" size={14} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
           )}
           ListEmptyComponent={
             loading ? (
@@ -336,14 +391,7 @@ export default function PersonnelManagement() {
               <View className="flex-row min-h-[220px]">
                 {/* LEFT SIDE: Identity & Phone */}
                 <View className="flex-1 justify-center items-center p-4 bg-slate-50/80">
-                  <Image 
-                  source={{ 
-                    uri: selectedUser?.avatar && selectedUser.avatar.includes('/uploads/')
-                      ? `${BASE_URL}${selectedUser.avatar}` 
-                      : selectedUser?.avatar               
-                  }} 
-                  className="w-20 h-20 rounded-full border-4 border-white mb-3" 
-                  />
+                  <UserAvatar item={selectedUser} baseUrl={BASE_URL} />
                   <Text className="text-lg font-black text-slate-900 text-center leading-5">{selectedUser?.name}</Text>
                   <Text className="text-[10px] font-bold text-slate-500 mt-2">{selectedUser?.phoneNumber}</Text>
                 </View>

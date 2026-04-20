@@ -2,7 +2,7 @@ import { Stack, useSegments } from "expo-router";
 import "./globals.css";
 import "../i18n"; 
 import { useEffect, useState } from 'react';
-import { I18nManager, Alert, Platform } from 'react-native';
+import { I18nManager, Alert, Platform, AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
 import * as Notifications from 'expo-notifications';
@@ -12,6 +12,7 @@ import * as Application from 'expo-application';
 import { API_URL } from '../constants';
 import { useTranslation } from 'react-i18next';
 import i18n from "../i18n";
+
 
 // --- Global Config & State ---
 Notifications.setNotificationHandler({
@@ -62,62 +63,79 @@ export default function RootLayout() {
   }, []);
 
   // --- 2. Guardian Heartbeat (Security Check) ---
-  useEffect(() => {
-    if (loading || !userId) return;
+ useEffect(() => {
+  if (loading || !userId) return;
 
-    const currentPath = segments[0] as string;
-    const isAuthGroup = currentPath === '(auth)' || currentPath === 'login' || currentPath === 'otp';
-    if (isAuthGroup) return;
+  const currentPath = segments[0] as string;
+  const isAuthGroup = currentPath === '(auth)' || currentPath === 'login' || currentPath === 'otp';
+  if (isAuthGroup) return;
 
-    let intervalId: any;
+  // 1. Move these variables up so the cleanup can see them clearly
+  let intervalId: any;
+  let subscription: any;
 
-    const startGuardian = async () => {
-      const deviceId = Platform.OS === 'android' 
-        ? await Application.getAndroidId() 
-        : await Application.getIosIdForVendorAsync();
+  const startGuardian = async () => {
+    const deviceId = Platform.OS === 'android' 
+      ? await Application.getAndroidId() 
+      : await Application.getIosIdForVendorAsync();
 
-      const check = async () => {
-        if (globalAlertActive) return;
-
-        try {
-          const res = await fetch(`${API_URL}/security/check-status?deviceId=${deviceId}&userId=${userId}`);
-          
-          // If the server itself is down, we don't kick them (be merciful)
-          if (res.status >= 500) return; 
-
-          const data = await res.json();
-
-          // 🛡️ Kick if DENIED or if the account/device no longer exists
-          if (data.status === 'DENIED' || data.status === 'NOT_FOUND') {
-            globalAlertActive = true;
-            
-            Alert.alert(
-              t('access_denied'), 
-              data.status === 'NOT_FOUND' ? t('account_deleted_msg') : t('revoked_msg'), 
-              [{ 
-                text: "OK", 
-                onPress: async () => {
-                  await logout(); // This clears AsyncStorage and state
-                  globalAlertActive = false;
-                } 
-              }], 
-              { cancelable: false }
-            );
-          } else if (data.status === 'ACTIVE') {
-            syncPushToken(Number(userId));
-          }
-        } catch (e) {
-          console.log("Guardian heartbeat: Network error, retrying later...");
+    const check = async () => {
+      if (globalAlertActive || !userId) return; 
+      try {
+        const res = await fetch(`${API_URL}/security/check-status?deviceId=${deviceId}&userId=${userId}`);
+        
+        if (res.status === 401 || res.status === 404) {
+           handleKick('NOT_FOUND');
+           return;
         }
-      };
 
-      await check();
-      intervalId = setInterval(check, 10000); 
+        const data = await res.json();
+        if (data.status === 'DENIED' || data.status === 'NOT_FOUND') {
+          handleKick(data.status);
+        }
+      } catch (e) {
+        console.log("Guardian: connection silent");
+      }
     };
 
-    startGuardian();
-    return () => clearInterval(intervalId);
-  }, [userId, loading, segments]);
+    const handleKick = (status: string) => {
+      globalAlertActive = true;
+      Alert.alert(
+        t('access_denied'), 
+        status === 'NOT_FOUND' ? t('account_deleted_msg') : t('revoked_msg'), 
+        [{ 
+          text: t('ok'), 
+          onPress: async () => {
+            await logout(); 
+            globalAlertActive = false;
+            clearInterval(intervalId);
+          } 
+        }], 
+        { cancelable: false }
+      );
+    };
+
+    // 2. Assign the listener to the variable we defined above
+    subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        console.log("📱 App foreground: checking security...");
+        check();
+      }
+    });
+
+    await check();
+    intervalId = setInterval(check, 60000); 
+  };
+
+  startGuardian();
+
+  // 3. Simple, synchronous cleanup
+  return () => {
+    if (subscription) subscription.remove();
+    if (intervalId) clearInterval(intervalId);
+  };
+}, [userId, loading, segments]);
+  
 
   // --- 3. Push Notification Listener ---
   useEffect(() => {

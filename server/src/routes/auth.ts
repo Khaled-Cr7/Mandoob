@@ -12,10 +12,10 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { username: username.toLowerCase()},
+      where: { username: username.toLowerCase().trim()},
     });
 
-    if (!user || user.password !== password) {
+    if (!user || user.password !== password.trim()) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 

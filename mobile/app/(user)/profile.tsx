@@ -1,39 +1,61 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams, useRouter } from 'expo-router'; 
 import * as ImagePicker from 'expo-image-picker';
 import { API_URL, BASE_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
-import { I18nManager } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Updates from 'expo-updates'; // Fixed import
-import { DevSettings } from 'react-native';
 import { RefreshControl } from 'react-native';
 import { useSession } from '@/hooks/useSession';
 import { handleLanguageToggle } from '../../utils/language';
-import * as Application from 'expo-application';
+import { Image } from 'expo-image';
+
+const ProfileAvatar = ({ avatarUri, fallbackUri, cacheKey }: { 
+  avatarUri: string | null, 
+  fallbackUri: string,
+  cacheKey: number 
+}) => {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [cacheKey]);
+
+  return (
+    <View className="w-28 h-28 rounded-full overflow-hidden bg-slate-100">
+      <Image
+        source={{ uri: imgError || !avatarUri ? fallbackUri : avatarUri }}
+        style={{ width: 112, height: 112, borderRadius: 56 }}
+        cachePolicy="none"
+        contentFit="cover"
+        onError={() => setImgError(true)}
+      />
+    </View>
+  );
+};
+
+
 
 export default function ProfileScreen() {
   const { userId } = useSession();
-  
-  const [refreshKey, setRefreshKey] = useState(0);
+
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);        // initial load only
   const [passModalVisible, setPassModalVisible] = useState(false);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [refreshing, setRefreshing] = useState(false);
+  const [cacheKey, setCacheKey] = useState(Date.now());
 
   const { confirmSignOut } = useSession();
 
   const { t, i18n } = useTranslation();
 
-  const onRefresh = useCallback(async () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    await fetchUserProfile();
+    setCacheKey(Date.now());
+    await fetchUserProfile(true); // isRefresh=true so loading state doesn't unmount screen
     setRefreshing(false);
-  }, [userId]);
+  };
 
   const toggleLanguage = async (lang: string) => {
     await handleLanguageToggle(i18n, t, userId, lang);
@@ -61,6 +83,7 @@ export default function ProfileScreen() {
 
       const data = await response.json();
       if (response.ok) {
+        setCacheKey(Date.now());
         setUser({ ...user, avatar: data.avatarUrl });
         Alert.alert("Success", "Profile picture updated");
       } else {
@@ -105,19 +128,17 @@ export default function ProfileScreen() {
     if (!result.canceled) await uploadImage(result.assets[0].uri);
   };
 
-  const fetchUserProfile = async () => {
-    if (!userId) return; // EXIT EARLY if userId is null
-
+  const fetchUserProfile = async (isRefresh = false) => {
+    if (!userId) return;
     try {
-      setLoading(true);
+      if (!isRefresh) setLoading(true);
       const response = await fetch(`${API_URL}/profile/${userId}`);
       const data = await response.json();
       if (response.ok) setUser(data);
-      else Alert.alert("Error", data.message || "User not found");
     } catch (error) {
       console.error("❌ Network Error:", error);
     } finally {
-      setLoading(false);
+      if (!isRefresh) setLoading(false);
     }
   };
 
@@ -159,11 +180,21 @@ export default function ProfileScreen() {
   };
 
 
+  const avatarUri = user?.avatar
+  ? `${BASE_URL}${user.avatar}?t=${cacheKey}`
+  : null;
+
+  const fallbackUri = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=0f172a&color=fbbf24`;
+
+  console.log('🔍 avatarUri:', avatarUri);
+
+
   if ( loading ) return (
     <View className="flex-1 justify-center items-center bg-white">
       <ActivityIndicator size="large" color="#3b82f6" />
     </View>
   );
+
 
   return (
     <ScrollView 
@@ -176,15 +207,11 @@ export default function ProfileScreen() {
         <View className="items-center">
           <View className="relative">
             <View className="border-2 border-blue-500/10 rounded-full p-1.5">
-             <Image 
-              source={{ 
-                uri: user?.avatar && user.avatar.includes('/uploads/')
-                  ? `${BASE_URL}${user.avatar}` 
-                  : user?.avatar               
-              }} 
-              className="w-28 h-28 rounded-full shadow-lg" 
-              style={{ backgroundColor: '#f1f5f9' }} // Background shows if image is loading
-            />
+              <ProfileAvatar
+                avatarUri={avatarUri}
+                fallbackUri={fallbackUri}
+                cacheKey={cacheKey}
+              />
             </View>
             <TouchableOpacity 
               onPress={() => setUploadModalVisible(true)}

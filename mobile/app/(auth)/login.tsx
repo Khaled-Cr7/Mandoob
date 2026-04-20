@@ -71,7 +71,7 @@ export default function LoginScreen() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         username: username.toLowerCase().trim(), 
-        password,
+        password: password.trim(),
         ...deviceData,
         pushToken 
       }),
