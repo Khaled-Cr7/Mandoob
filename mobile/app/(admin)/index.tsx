@@ -131,21 +131,32 @@ export default function AdminPhoneManagement() {
   };
 
   const handleSave = async () => {
-    if (!formData.id || !formData.name || !formData.price || !formData.brandId) {
-      Alert.alert(t('missing_data'), t('missing_data_msg'));
+    const { id, name, price, brandId } = formData;
+    
+    // 1. Deep Validation
+    if (!id.trim() || !name.trim() || !price || !brandId) {
+      Alert.alert(t('error'), t('fill_all_fields'));
+      return;
+    }
+
+    const numericPrice = parseFloat(price);
+    if (isNaN(numericPrice) || numericPrice <= 0) {
+      Alert.alert(t('error'), t('invalid_price_msg')); // "Please enter a valid positive price"
       return;
     }
 
     try {
       const method = isEditing ? 'PUT' : 'POST';
-      const endpoint = isEditing ? `${API_URL}/phones/${formData.id}` : `${API_URL}/phones`;
+      const endpoint = isEditing ? `${API_URL}/phones/${id}` : `${API_URL}/phones`;
       
       const response = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           ...formData, 
-          price: parseFloat(formData.price),
+          id: id.trim().toUpperCase(),
+          name: name.trim(),
+          price: numericPrice,
           userId: Number(userId)
         })
       });
@@ -153,12 +164,13 @@ export default function AdminPhoneManagement() {
       if (response.ok) {
         setIsModalVisible(false);
         fetchPhones();
+        Alert.alert(t('success'), isEditing ? t('updated_msg') : t('added_msg'));
       } else {
         const err = await response.json();
-        Alert.alert(t('system_error'), err.message || t('action_failed'));
+        Alert.alert(t('error'), err.message || t('action_failed'));
       }
     } catch (e) {
-      Alert.alert(t('connection_error'), t('db_reach_error'));
+      Alert.alert(t('error'), t('connection_error'));
     }
   };
 
@@ -237,7 +249,7 @@ export default function AdminPhoneManagement() {
   };
 
   const handleSaveBrand = async () => {
-    const trimmedName = brandForm.name.trim();
+    const trimmedName = brandForm.name.trim().toUpperCase();
 
     // 1. EMPTY INPUT CHECK
     if (!trimmedName) {
@@ -247,7 +259,7 @@ export default function AdminPhoneManagement() {
 
     // 2. DUPLICATE CHECK (Local check before hitting server)
     const exists = availableBrands.some(
-      (b) => b.name.toUpperCase() === trimmedName.toUpperCase() && b.id !== brandForm.id
+      (b) => b.name === trimmedName && b.id !== brandForm.id
     );
     if (exists) {
       Alert.alert(t('error'), t('brand_exists'));

@@ -93,17 +93,35 @@ export default function LoginScreen() {
         router.replace(target);
       }
     } else {
-      // --- THIS IS WHERE THE ERROR LOGIC LIVES ---
-      if (data.message === "DEVICE_LINKED_ELSEWHERE") {
-        Alert.alert(
-          t('access_denied'), 
-          t('device_already_linked_msg') || "This device is already linked to another account."
-        );
-      } else {
-        // Default error (Wrong password, etc.)
-        Alert.alert(t('login_failed'), t('login_failed_msg'));
+      // 🛡️ Enhanced Error Handling
+        switch (data.message) {
+          case "INVALID_CREDENTIALS":
+            Alert.alert(t('login_failed'), t('wrong_user_pass'));
+            break;
+
+          case "DEVICE_LINKED_ELSEWHERE":
+            Alert.alert(t('access_denied'), t('device_already_linked_msg'));
+            break;
+
+          case "RATE_LIMIT_EXCEEDED":
+            Alert.alert(
+              t('too_many_requests'), 
+              `${t('wait_msg')} ${data.secondsRemaining} ${t('seconds')}`
+            );
+            break;
+
+          case "DEVICE_DENIED":
+            // Direct to OTP screen where the 'Banned' UI is handled
+            router.replace({ 
+              pathname: '/(auth)/otp', 
+              params: { userId: String(data.id), deviceId: deviceData.deviceId } 
+            });
+            break;
+
+          default:
+            Alert.alert(t('error'), t('system_error'));
+        }
       }
-    }
   } catch (error) {
     Alert.alert(t('error'), t('connection_error'));
   } finally {

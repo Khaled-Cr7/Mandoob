@@ -8,22 +8,25 @@ const router = express.Router();
 
 
 router.post('/login', async (req, res) => {
-  const { username, password, deviceId, deviceModel, brand, deviceName, pushToken } = req.body;
+  let { username, password, deviceId, deviceModel, brand, deviceName, pushToken } = req.body;
 
   try {
+    username = username?.toLowerCase().trim();
+    password = password?.trim();
+    deviceId = String(deviceId).trim();
+
     const user = await prisma.user.findUnique({
-      where: { username: username.toLowerCase().trim()},
+      where: { username },
     });
 
-    if (!user || user.password !== password.trim()) {
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (!user || user.password !== password) {
+      return res.status(401).json({ message: "INVALID_CREDENTIALS" });
     }
 
     const existingDeviceOwner = await prisma.userDevice.findUnique({
-      where: { deviceId: String(deviceId) }
+      where: { deviceId }
     });
 
-    // If the device exists AND it belongs to someone else
     if (existingDeviceOwner && existingDeviceOwner.userId !== user.id) {
       return res.status(403).json({ 
         message: "DEVICE_LINKED_ELSEWHERE",
@@ -31,35 +34,49 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // --- RATE LIMIT CHECK ---
+    const existingCode = await prisma.validationCode.findUnique({
+      where: { deviceId }
+    });
 
+    const now = new Date();
+    if (existingCode) {
+      const secondsSinceLastCode = (now.getTime() - existingCode.createdAt.getTime()) / 1000;
+      if (secondsSinceLastCode < 60) {
+        return res.status(429).json({ 
+          message: "RATE_LIMIT_EXCEEDED",
+          secondsRemaining: Math.ceil(60 - secondsSinceLastCode)
+        });
+      }
+    }
 
-    // 1. Check if this device is already in our table
-    const existingDevice = await prisma.userDevice.findFirst({
-      where: { userId: user.id, deviceId: deviceId }
+    // 1. Get current device state
+    const existingDevice = await prisma.userDevice.findUnique({
+      where: { deviceId }
     });
 
     // --- CASE 1: SUCCESS (ALREADY ACTIVE) ---
     if (existingDevice && existingDevice.status === 'ACTIVE') {
       await prisma.userDevice.update({
-        where: { deviceId: deviceId },
-        data: { pushToken: pushToken || existingDevice.pushToken, lastUsed: new Date() }
+        where: { deviceId },
+        // 🔑 FIX: Don't overwrite with null if pushToken is missing this time
+        data: { pushToken: pushToken || existingDevice.pushToken, lastUsed: now }
       });
       return res.json({ id: user.id, role: user.role, needsOTP: false });
     }
 
     // --- CASE 2: DENIED ---
-    // If it's denied, just send to OTP page (the OTP page will show the "Banned" UI)
     if (existingDevice && existingDevice.status === 'DENIED') {
       return res.json({ id: user.id, role: user.role, needsOTP: true, message: "DEVICE_DENIED" });
     }
 
-    // --- CASE 3: NEW OR PENDING (NEEDS CODE) ---
-    // We use UPSERT here to either create a new record or update the existing PENDING one
+    // --- CASE 3: NEW OR PENDING ---
     await prisma.userDevice.upsert({
-      where: { deviceId: deviceId },
+      where: { deviceId },
       update: {
-        lastUsed: new Date(),
-        pushToken: pushToken || null
+        lastUsed: now,
+        // 🔑 FIX: Keep old token if new one is empty
+        pushToken: pushToken || existingDevice?.pushToken 
       },
       create: {
         userId: user.id,
@@ -72,18 +89,17 @@ router.post('/login', async (req, res) => {
       }
     });
 
-    // ALWAYS generate/refresh the code for PENDING devices on login
     const generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60000); // 5 Minutes
+    const expiresAt = new Date(Date.now() + 5 * 60000);
 
     await prisma.validationCode.upsert({
-      where: { deviceId: deviceId }, 
-      update: { code: generatedCode, expiresAt: expiresAt, createdAt: new Date(), userId: user.id },
+      where: { deviceId }, 
+      update: { code: generatedCode, expiresAt, createdAt: now, userId: user.id },
       create: {
         userId: user.id,
-        deviceId: deviceId,
+        deviceId,
         code: generatedCode,
-        expiresAt: expiresAt
+        expiresAt
       }
     });
 
@@ -91,12 +107,12 @@ router.post('/login', async (req, res) => {
       id: user.id, 
       role: user.role, 
       needsOTP: true, 
-      message: "Device verification required." 
+      message: "OTP_REQUIRED" // If we reached here, it's a normal OTP flow
     });
 
   } catch (error) {
     console.error("Login Error:", error);
-    res.status(500).json({ message: "Login Error" });
+    res.status(500).json({ message: "SYSTEM_ERROR" });
   }
 });
 

@@ -93,19 +93,30 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { password, avatar } = req.body;
+    let { password, avatar } = req.body; // use 'let' so we can trim
 
     const updateData: any = {};
-    
-    // Only add to update object if the user actually sent them
+    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
+
+    // 1. Validate Password
     if (password && password.trim() !== "") {
-        updateData.password = password;
-    }
-    if (avatar) {
-        updateData.avatar = avatar;
+      if (!passRegex.test(password)) {
+        return res.status(400).json({ message: "Password too weak" });
+      }
+      updateData.password = password;
     }
 
-    const updatedUser = await prisma.user.update({
+    // 2. Validate Avatar String (if provided manually)
+    if (avatar) {
+      updateData.avatar = avatar;
+    }
+
+    // Safety: If someone sends an empty body, don't trigger Prisma
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: "Nothing to update" });
+    }
+
+    await prisma.user.update({
       where: { id: parseInt(id) },
       data: updateData
     });
@@ -126,7 +137,14 @@ router.post('/avatar/:id', upload.single('avatar'), async (req, res) => {
       return res.status(400).json({ message: "No file uploaded." });
     }
 
-    // 1. Find the user FIRST to get their current avatar path
+    // 🛡️ SECURITY CHECK: Validate MimeType
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      // 🗑️ Delete the invalid file from 'uploads' immediately
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({ message: "Invalid file type. Only JPG, PNG, and WEBP allowed." });
+    }
+
     const currentUser = await prisma.user.findUnique({
       where: { id: parseInt(id) },
       select: { avatar: true }
@@ -154,21 +172,21 @@ router.post('/avatar/:id', upload.single('avatar'), async (req, res) => {
     // We stop using req.protocol and host. We just save the path.
     const relativePath = `/uploads/${req.file.filename}`;
     
-    // 4. UPDATE DATABASE
     await prisma.user.update({
       where: { id: parseInt(id) },
-      data: { avatar: relativePath } // Stores: "/uploads/12345.jpg"
+      data: { avatar: relativePath }
     });
 
-    console.log(`📸 New avatar path saved: ${relativePath}`);
-    
-    // Return the relative path. Your frontend will combine this with API_URL
     res.json({ 
       message: "Avatar updated", 
       avatarUrl: relativePath 
     });
 
   } catch (error: any) {
+    // 🛡️ SECURITY CHECK: Clean up file if database update fails
+    if (req.file && fs.existsSync(req.file.path)) {
+       fs.unlinkSync(req.file.path);
+    }
     console.error("❌ Upload failed:", error.message);
     res.status(500).json({ message: "Update failed" });
   }

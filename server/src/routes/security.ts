@@ -151,21 +151,47 @@ router.post('/verify-otp', async (req, res) => {
 router.post('/resend-otp', async (req, res) => {
   const { userId, deviceId } = req.body;
 
-  const generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
-  const expiresAt = new Date(Date.now() + 5 * 60000);
+  try {
+    // 1. Check for existing rate limit
+    const existingCode = await prisma.validationCode.findUnique({
+      where: { deviceId: String(deviceId) }
+    });
 
-  await prisma.validationCode.upsert({
-    where: { deviceId: String(deviceId) },
-    update: { code: generatedCode, expiresAt: expiresAt, createdAt: new Date() },
-    create: {
-      userId: Number(userId),
-      deviceId: String(deviceId),
-      code: generatedCode,
-      expiresAt: expiresAt
+    if (existingCode) {
+      const now = new Date();
+      const secondsSinceLast = (now.getTime() - existingCode.createdAt.getTime()) / 1000;
+      
+      // Block if they asked for a code less than 60 seconds ago
+      if (secondsSinceLast < 60) {
+        return res.status(429).json({ 
+          message: "RATE_LIMIT_EXCEEDED", 
+          secondsRemaining: Math.ceil(60 - secondsSinceLast) 
+        });
+      }
     }
-  });
 
-  res.json({ message: "New code generated" });
+    const generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60000);
+
+    await prisma.validationCode.upsert({
+      where: { deviceId: String(deviceId) },
+      update: { 
+        code: generatedCode, 
+        expiresAt: expiresAt, 
+        createdAt: new Date() // CRITICAL: Reset the 60s timer
+      },
+      create: {
+        userId: Number(userId),
+        deviceId: String(deviceId),
+        code: generatedCode,
+        expiresAt: expiresAt
+      }
+    });
+
+    res.json({ message: "New code generated" });
+  } catch (error) {
+    res.status(500).json({ message: "Resend failed" });
+  }
 });
 
 

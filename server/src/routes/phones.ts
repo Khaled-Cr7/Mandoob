@@ -14,11 +14,19 @@ router.get('/brands', async (req, res) => {
   }
 });
 
+// CREATE BRAND
 router.post('/brands', async (req, res) => {
-  const { name } = req.body;
+  let { name } = req.body;
   try {
+    name = name?.trim().toUpperCase();
+    
+    // 1. Validation
+    if (!name || name.length < 2 || name.length > 30) {
+      return res.status(400).json({ message: "Brand name must be 2-30 characters" });
+    }
+
     const newBrand = await prisma.brand.create({
-      data: { name: name.toUpperCase().trim() }
+      data: { name }
     });
     res.json(newBrand);
   } catch (e) {
@@ -28,15 +36,28 @@ router.post('/brands', async (req, res) => {
 
 router.put('/brands/:id', async (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  let { name } = req.body;
+
   try {
+    name = name?.trim().toUpperCase();
+
+    // 1. Length Validation
+    if (!name || name.length < 2 || name.length > 30) {
+      return res.status(400).json({ message: "Brand name must be 2-30 characters" });
+    }
+
     const updated = await prisma.brand.update({
       where: { id: Number(id) },
-      data: { name: name.toUpperCase().trim() }
+      data: { name }
     });
+
     res.json(updated);
-  } catch (e) {
-    res.status(400).json({ message: "Update failed or brand name exists" });
+  } catch (e: any) {
+    // 2. Handle Unique Constraint (P2002)
+    if (e.code === 'P2002') {
+      return res.status(400).json({ message: "Another brand already has this name" });
+    }
+    res.status(400).json({ message: "Update failed" });
   }
 });
 
@@ -169,32 +190,39 @@ router.delete('/:id', async (req, res) => {
 // POST NEW PHONE
 router.post('/', async (req, res) => {
   try {
-    // We extract userId from the body
-    const { id, name, brandId, price, userId } = req.body; 
+    let { id, name, brandId, price, userId } = req.body;
     
+    // 1. Sanitize & Validate
+    id = id?.trim().toUpperCase(); // e.g., "IPH15PRO"
+    name = name?.trim();
+    const cleanPrice = parseFloat(price);
+
+    if (!id || id.length > 20) return res.status(400).json({ message: "Invalid Model ID" });
+    if (!name || name.length > 50) return res.status(400).json({ message: "Invalid Name" });
+    if (isNaN(cleanPrice) || cleanPrice < 0) return res.status(400).json({ message: "Invalid Price" });
+
     const newPhone = await prisma.phone.create({
       data: { 
         id, 
         name, 
         brandId: Number(brandId), 
-        price: parseFloat(price), 
+        price: cleanPrice, 
         lastUpdated: new Date() 
       }
     });
 
-    // Log the change with the Admin's ID
+    // 2. Audit Log
     await prisma.systemChange.create({
       data: {
         type: 'ADDED',
         modelName: name,
-        userId: Number(userId), // Tracks who added it
+        userId: Number(userId),
       }
     });
 
     res.json(newPhone);
   } catch (error) {
-    console.error(error);
-    res.status(400).json({ message: "ID already exists or invalid data" });
+    res.status(400).json({ message: "ID already exists or Brand not found" });
   }
 });
 

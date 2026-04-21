@@ -82,38 +82,40 @@ export default function AdminManagement() {
 
   // --- VALIDATION ENGINE ---
   const validateAdminData = () => {
-  const { name, username, password, phoneNumber } = formData;
+    const { name, username, password, phoneNumber } = formData;
 
-  if (!name.trim()) {
-    Alert.alert(t('missing_data'), t('enter_name')); // "Please enter a Name"
-    return false;
-  }
-  if (!username.trim()) {
-    Alert.alert(t('missing_data'), t('enter_unique_username')); // "Please enter a Username"
-    return false;
-  }
-  if (!isEditing || (isEditing && password.length > 0)) {
-    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
-    if (!passRegex.test(password)) {
-      Alert.alert(t('weak_password'), t('weak_password_msg'));
+    // 1. Basic Info & Username Regex (3-20 chars, alphanumeric + underscore)
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+
+    if (!name.trim()) {
+      Alert.alert(t('missing_data'), t('enter_name'));
       return false;
     }
-  }
-  // --- Smart Phone Validation ---
-  if (!phoneNumber) {
-    Alert.alert(t('required'), t('enter_phone'));
-    return false;
-  }
-  if (phoneNumber.length !== 10) {
-    Alert.alert(t('invalid_length'), t('ten_digits_only')); // New specific error
-    return false;
-  }
-  if (!phoneNumber.startsWith("05")) {
-    Alert.alert(t('invalid_format'), t('start_with_05'));
-    return false;
-  }
-  return true;
-};
+
+    // 🛡️ Added: Username format check
+    if (!usernameRegex.test(username.trim())) {
+      Alert.alert(t('invalid_username'), t('username_rules_msg'));
+      return false;
+    }
+
+    // 2. Password Check
+    if (!isEditing || (isEditing && password.length > 0)) {
+      const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
+      if (!passRegex.test(password)) {
+        Alert.alert(t('weak_password'), t('weak_password_msg'));
+        return false;
+      }
+    }
+
+    // 3. Smart Phone Validation (05XXXXXXXX)
+    const phoneRegex = /^05\d{8}$/; 
+    if (!phoneRegex.test(phoneNumber.trim())) {
+      Alert.alert(t('invalid_phone'), t('phone_format_msg'));
+      return false;
+    }
+
+    return true;
+  };
 
   // --- HANDLERS ---
   const handleSave = async () => {
@@ -129,20 +131,21 @@ export default function AdminManagement() {
         body: JSON.stringify({ 
             ...formData, 
             role: 'ADMIN', 
-            username: formData.username.toLowerCase().trim() 
+            username: formData.username.toLowerCase().trim(),
+            phoneNumber: formData.phoneNumber.trim() // 🛡️ Added trim here
         })
-        });
+      });
 
-        // Move the json parsing inside the check to be safe
-        if (res.ok) {
-            const result = await res.json();
-            setIsModalVisible(false);
-            fetchAdmins();
-        } else {
-            const result = await res.json(); // Only parse if we know there is a body
-            const serverMessage = result.message || t('action_failed');
-            Alert.alert(t('system_error'), serverMessage);
-        }
+      const result = await res.json(); 
+
+      if (res.ok) {
+          setIsModalVisible(false);
+          fetchAdmins();
+          // Optional: Alert.alert(t('success'), t('admin_saved'));
+      } else {
+          const serverMessage = result.message || t('action_failed');
+          Alert.alert(t('system_error'), serverMessage);
+      }
     } catch (e) {
       Alert.alert(t('connection_error'), t('db_reach_error'));
     }

@@ -71,18 +71,25 @@ export default function OTPScreen() {
   const handleRequestNewCode = async () => {
     setLoading(true);
     try {
-      // We call a new "Resend" endpoint instead of making the user log in again
       const res = await fetch(`${API_URL}/security/resend-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, deviceId })
       });
       
+      const data = await res.json();
+
       if (res.ok) {
-        // Reset the UI to "Fresh" state
         setIsExpired(false);
         setUserEnteredCode(['', '', '', '']);
-        checkDeviceStatus(); // Fetch the new code's expiry from DB
+        checkDeviceStatus(); 
+        Alert.alert(t('success'), t('new_code_sent'));
+      } else if (res.status === 429) {
+        // 🛡️ User is spamming the resend button
+        Alert.alert(
+          t('too_many_requests'), 
+          `${t('wait_msg')} ${data.secondsRemaining} ${t('seconds')}`
+        );
       }
     } catch (e) {
       Alert.alert(t('error'), t('connection_error'));
@@ -218,7 +225,17 @@ export default function OTPScreen() {
   } finally {
     setLoading(false);
   }
+
+
+  useEffect(() => {
+    const fullCode = userEnteredCode.join('');
+    if (fullCode.length === 4) {
+      verifyCode(); // Trigger automatically when all 4 boxes are full
+    }
+  }, [userEnteredCode]);
+
 };
+
 
   // --- RENDER DENIED STATE ---
   if (status === 'DENIED') {

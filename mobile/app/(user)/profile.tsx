@@ -87,11 +87,11 @@ export default function ProfileScreen() {
         setUser({ ...user, avatar: data.avatarUrl });
         Alert.alert("Success", "Profile picture updated");
       } else {
-        Alert.alert("Error", data.message || "Upload failed");
+        Alert.alert(t("error"), data.message || t("upload_failed"));
       }
     } catch (error) {
       console.error("❌ Upload Network Error:", error);
-      Alert.alert("Error", "Network error. Try again.");
+      Alert.alert(t("error"), t("network_error"));
     } finally {
       setLoading(false);
       setUploadModalVisible(false);
@@ -101,7 +101,7 @@ export default function ProfileScreen() {
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert("Permission", "Permission to access camera is required.");
+      Alert.alert(t("permission_required"), t("camera_permission_msg"));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -116,7 +116,7 @@ export default function ProfileScreen() {
   const openGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert("Permission", "Permission to access photo gallery is required.");
+      Alert.alert(t("permission_required"), t("gallery_permission_msg"));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -153,11 +153,11 @@ export default function ProfileScreen() {
     const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
 
     if (!passRegex.test(newPassword)) {
-      Alert.alert("Weak Password", "Must be 8+ characters with uppercase, lowercase, numbers, and symbols.");
+     Alert.alert(t('weak_password'), t('weak_password_msg'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
+      Alert.alert(t('password_mismatch'), t('password_mismatch_msg'));
       return;
     }
 
@@ -290,8 +290,8 @@ export default function ProfileScreen() {
             <Text className="text-3xl font-black text-slate-900 mb-2 tracking-tighter">{t('new_password')}</Text>
             <Text className="text-slate-400 text-xs font-bold mb-10 uppercase tracking-widest">{t('update_security')}</Text>
             <View className="gap-y-5">
-              <TextInput placeholder={t('new_password')} secureTextEntry className="bg-slate-50 p-5 rounded-3xl border border-slate-100 font-bold" value={passwordData.newPassword} onChangeText={(v) => setPasswordData({...passwordData, newPassword: v})} />
-              <TextInput placeholder={t('repeat_password')} secureTextEntry className="bg-slate-50 p-5 rounded-3xl border border-slate-100 font-bold" value={passwordData.confirmPassword} onChangeText={(v) => setPasswordData({...passwordData, confirmPassword: v})} />
+              <TextInput placeholder={t('new_password')} autoCapitalize="none" secureTextEntry className="bg-slate-50 p-5 rounded-3xl border border-slate-100 font-bold" value={passwordData.newPassword} onChangeText={(v) => setPasswordData({...passwordData, newPassword: v.trim()})} />
+              <TextInput placeholder={t('repeat_password')} autoCapitalize="none" secureTextEntry className="bg-slate-50 p-5 rounded-3xl border border-slate-100 font-bold" value={passwordData.confirmPassword} onChangeText={(v) => setPasswordData({...passwordData, confirmPassword: v.trim()})} />
             </View>
             <View className="flex-row mt-12 gap-x-4">
               <TouchableOpacity onPress={() => setPassModalVisible(false)} className="flex-1 h-16 rounded-[24px] justify-center items-center border border-slate-200"><Text className="text-slate-400 font-black text-xs uppercase">{t('cancel')}</Text></TouchableOpacity>

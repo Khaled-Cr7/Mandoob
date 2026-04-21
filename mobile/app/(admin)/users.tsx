@@ -143,13 +143,20 @@ export default function PersonnelManagement() {
   const validateUser = () => {
     const { name, username, password, phoneNumber } = formData;
     
-    // 1. Basic Info Check
-    if (!name.trim() || !username.trim()) {
+    // 1. Basic Info & Username Regex
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/; // 3-20 chars, alphanumeric + underscore
+    
+    if (!name.trim()) {
       Alert.alert(t('missing_data'), t('enter_name'));
       return false;
     }
+    
+    if (!usernameRegex.test(username.trim())) {
+      Alert.alert(t('invalid_username'), t('username_rules_msg')); // "3-20 chars, letters, numbers, underscores only"
+      return false;
+    }
 
-    // 2. Password Check (Only on Add or if changing during Edit)
+    // 2. Password Check
     if (!isEditing || (isEditing && password.length > 0)) {
       const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
       if (!passRegex.test(password)) {
@@ -158,32 +165,13 @@ export default function PersonnelManagement() {
       }
     }
 
-    // 3. Phone Number Check
-    if (!phoneNumber) {
-      Alert.alert(t('required'), t('enter_phone'));
+    // 3. Phone Number Check (Strict 05XXXXXXXX)
+    const phoneRegex = /^05\d{8}$/; 
+    if (!phoneRegex.test(phoneNumber.trim())) {
+      Alert.alert(t('invalid_phone'), t('phone_format_msg')); // "Must start with 05 and be 10 digits"
       return false;
     }
 
-    const isNumeric = /^\d+$/.test(phoneNumber);
-
-    if (!isNumeric) {
-      Alert.alert(t('invalid_input'), t('digits_only'));
-      return false;
-    }
-
-    // Check Length (10 digits)
-    if (phoneNumber.length !== 10) {
-      Alert.alert(t('invalid_length'), t('ten_digits_only'));
-      return false;
-    }
-
-    // Check Prefix (Starts with 05)
-    if (!phoneNumber.startsWith("05")) {
-      Alert.alert(t('invalid_format'), t('start_with_05'));
-      return false;
-    }
-
-    // If we reach here, everything is perfect
     return true;
   };
 
