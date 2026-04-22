@@ -1,4 +1,4 @@
-import { Stack, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import "./globals.css";
 import "../i18n"; 
 import { useEffect, useState } from 'react';
@@ -32,6 +32,7 @@ export default function RootLayout() {
   const { t } = useTranslation();
   const segments = useSegments();
   const [isReady, setIsReady] = useState(false);
+  const router = useRouter();
 
   // --- 1. Startup Sync (Language & RTL) ---
   useEffect(() => {
@@ -147,6 +148,22 @@ export default function RootLayout() {
     });
     return () => subscription.remove();
   }, []);
+
+  useEffect(() => {
+    if (!isReady || loading) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!userId && !inAuthGroup) {
+      // 1. Not logged in -> Go to Login
+      router.replace("/(auth)/login");
+    } else if (userId && inAuthGroup) {
+      // 2. Logged in but trying to see Login screen -> Redirect to Home
+      // You might need a "fetchRole" here or get it from your session
+      router.replace("/(user)"); 
+    }
+  }, [userId, loading, isReady, segments]);
+
 
   // --- 4. Render Logic ---
   // We wait for isReady to be true so the Stack doesn't load with the wrong RTL direction

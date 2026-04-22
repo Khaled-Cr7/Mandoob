@@ -14,13 +14,47 @@ export function useSession() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    const getID = async () => {
+    const validateSession = async () => {
       const id = await AsyncStorage.getItem('userId');
-      setUserId(id);
-      setLoading(false);
+      
+      if (!id) {
+        setUserId(null);
+        setLoading(false);
+        return;
+      }
+
+      // 🛡️ THE FORTRESS CHECK: Verify the ID with the server on boot
+      try {
+        const deviceId = Platform.OS === 'android' 
+          ? await Application.getAndroidId() 
+          : await Application.getIosIdForVendorAsync();
+
+        const res = await fetch(`${API_URL}/security/check-status?deviceId=${deviceId}&userId=${id}`);
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'ACTIVE') {
+            setUserId(id);
+          } else {
+            // User exists but is Banned or Pending
+            await AsyncStorage.removeItem('userId');
+            setUserId(null);
+          }
+        } else {
+          // 401 or 404: User was deleted
+          await AsyncStorage.removeItem('userId');
+          setUserId(null);
+        }
+      } catch (e) {
+        // If server is down, we trust the local ID so they can at least see cached data
+        setUserId(id);
+      } finally {
+        setLoading(false);
+      }
     };
-    getID();
-  }, [segments]);
+
+    validateSession();
+  }, []);
 
   const logout = async () => {
     // We wrap the actual logic so we can call it from the Alert or directly
