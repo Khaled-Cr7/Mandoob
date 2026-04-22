@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 export default function AdminLayout() {
+  const {t} = useTranslation();  
   return (
     <Tabs screenOptions={{ 
       headerShown: false,
@@ -25,7 +27,7 @@ export default function AdminLayout() {
       <Tabs.Screen 
         name="index" 
         options={{ 
-          title: 'DEVICES',
+          title: t('devices'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "cube" : "cube-outline"} size={22} color={color} />
           )
@@ -34,12 +36,44 @@ export default function AdminLayout() {
       <Tabs.Screen 
         name="users" 
         options={{ 
-          title: 'PERSONNEL',
+          title: t('user'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "people" : "people-outline"} size={22} color={color} />
           )
         }} 
       />
+      <Tabs.Screen
+        name="admins"
+        options={{
+          title: "ADMINS",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "shield-checkmark" : "shield-checkmark-outline"} size={22} color={color} />
+          )
+        }}
+      />
+
+      <Tabs.Screen
+        name="devices-secure"
+        options={{
+          title: t('security'), // or "ACCESS"
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "hardware-chip" : "hardware-chip-outline"} size={22} color={color} />
+          )
+        }}
+      />
+      <Tabs.Screen 
+        name="changes" // This must match your filename (notifications.tsx)
+        options={{ 
+          href: null, // THIS HIDES IT FROM THE TAB BAR
+        }} 
+      />
+      <Tabs.Screen 
+        name="notifications" // This must match your filename (notifications.tsx)
+        options={{ 
+          href: null, // THIS HIDES IT FROM THE TAB BAR
+        }} 
+      />
+
     </Tabs>
   );
 }

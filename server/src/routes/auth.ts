@@ -1,67 +1,143 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pkg from 'pg';
-const { Pool } = pkg;
+import {prisma} from '../index';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-
-console.log("🔍 Testing ENV URL:", process.env.DATABASE_URL ? "FOUND ✅" : "NOT FOUND ❌");
-
-
 const router = express.Router();
 
-// 1. Create the connection pool
-const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL
-});
-
-pool.connect((err, client, release) => {
-  if (err) {
-    return console.error('❌ POOL ERROR: Could not connect to PostgreSQL', err.stack);
-  }
-  console.log('✅ POOL SUCCESS: Connected to PostgreSQL');
-  release();
-});
-
-// 2. Create the adapter
-const adapter = new PrismaPg(pool);
-
-// 3. Initialize Prisma with the adapter
-const prisma = new PrismaClient({ adapter });
 
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  console.log("🚀 Login attempt received:", username);
+  let { username, password, deviceId, deviceModel, brand, deviceName, pushToken } = req.body;
 
   try {
-    // 1. Find user by email
+    username = username?.toLowerCase().trim();
+    password = password?.trim();
+    deviceId = String(deviceId).trim();
+
     const user = await prisma.user.findUnique({
-      where: { username: username },
+      where: { username },
     });
 
-    // 2. Check if user exists
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (!user || user.password !== password) {
+      return res.status(401).json({ message: "INVALID_CREDENTIALS" });
     }
 
-    // 3. Check password (Simple check for now)
-    if (user.password !== password) {
-      return res.status(401).json({ message: "Invalid password" });
-    }
-
-    // 4. Send back the User Data + Role
-    res.json({
-      id: user.id,
-      name: user.name,
-      role: user.role, // This is the 'ADMIN' or 'USER' string
+    const existingDeviceOwner = await prisma.userDevice.findUnique({
+      where: { deviceId }
     });
+
+    if (existingDeviceOwner && existingDeviceOwner.userId !== user.id) {
+      return res.status(403).json({ 
+        message: "DEVICE_LINKED_ELSEWHERE",
+        errorDetail: "This device is already linked to another account." 
+      });
+    }
+
+    // --- RATE LIMIT CHECK ---
+    const existingCode = await prisma.validationCode.findUnique({
+      where: { deviceId }
+    });
+
+    const now = new Date();
+    if (existingCode) {
+      const secondsSinceLastCode = (now.getTime() - existingCode.createdAt.getTime()) / 1000;
+      if (secondsSinceLastCode < 60) {
+        return res.status(429).json({ 
+          message: "RATE_LIMIT_EXCEEDED",
+          secondsRemaining: Math.ceil(60 - secondsSinceLastCode)
+        });
+      }
+    }
+
+    // 1. Get current device state
+    const existingDevice = await prisma.userDevice.findUnique({
+      where: { deviceId }
+    });
+
+    // --- CASE 1: SUCCESS (ALREADY ACTIVE) ---
+    if (existingDevice && existingDevice.status === 'ACTIVE') {
+      await prisma.userDevice.update({
+        where: { deviceId },
+        // 🔑 FIX: Don't overwrite with null if pushToken is missing this time
+        data: { pushToken: pushToken || existingDevice.pushToken, lastUsed: now }
+      });
+      return res.json({ id: user.id, role: user.role, needsOTP: false });
+    }
+
+    // --- CASE 2: DENIED ---
+    if (existingDevice && existingDevice.status === 'DENIED') {
+      return res.json({ id: user.id, role: user.role, needsOTP: true, message: "DEVICE_DENIED" });
+    }
+
+    // --- CASE 3: NEW OR PENDING ---
+    await prisma.userDevice.upsert({
+      where: { deviceId },
+      update: {
+        lastUsed: now,
+        // 🔑 FIX: Keep old token if new one is empty
+        pushToken: pushToken || existingDevice?.pushToken 
+      },
+      create: {
+        userId: user.id,
+        deviceId,
+        deviceName,
+        deviceModel,
+        brand,
+        pushToken: pushToken || null,
+        status: 'PENDING'
+      }
+    });
+
+    const generatedCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60000);
+
+    await prisma.validationCode.upsert({
+      where: { deviceId }, 
+      update: { code: generatedCode, expiresAt, createdAt: now, userId: user.id },
+      create: {
+        userId: user.id,
+        deviceId,
+        code: generatedCode,
+        expiresAt
+      }
+    });
+
+    return res.json({ 
+      id: user.id, 
+      role: user.role, 
+      needsOTP: true, 
+      message: "OTP_REQUIRED" // If we reached here, it's a normal OTP flow
+    });
+
   } catch (error) {
-    console.error("❌ DATABASE ERROR:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Login Error:", error);
+    res.status(500).json({ message: "SYSTEM_ERROR" });
   }
 });
+
+// POST /api/logout
+router.post('/logout', async (req, res) => {
+  const { userId, deviceId } = req.body;
+
+  try {
+    await prisma.userDevice.update({
+      where: {
+        userId_deviceId: {
+          userId: Number(userId),
+          deviceId: deviceId,
+        },
+      },
+      data: { pushToken: null },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    // We don't want to block the user from logging out if the server fails
+    res.status(500).json({ message: "Logout recorded locally only" });
+  }
+});
+
+
 
 export default router;

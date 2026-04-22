@@ -11,34 +11,137 @@ enum Role {
   ADMIN
 }
 
-enum Brand {
-  SAMSUNG
-  HONOR
-  TECHNO
-  INFINIX
+enum ChangeType {
+  ADDED
+  PRICE_UPDATE
 }
 
 
+
+
+// Added statuses for the Device Management logic
+enum DeviceStatus {
+  ACTIVE
+  DENIED
+  PENDING
+}
+
 model User {
-  id            Int       @id @default(autoincrement())
-  name          String
-  username      String    @unique
-  password      String    
-  phoneNumber   String    @default("0000000000")
-  role          Role      @default(USER)
-  avatar        String    @default("https://ui-avatars.com/api/?name=User&background=random")
-  createdAt     DateTime  @default(now())
+  id               Int                @id @default(autoincrement())
+  name             String
+  language         String             @default("en")
+  username         String             @unique
+  password         String
+  phoneNumber      String             @default("0000000000")
+  role             Role               @default(USER)
+  avatar           String             @default("https://ui-avatars.com/api/?name=User&background=random")
+           
+  createdAt        DateTime           @default(now())
+
+  // --- RELATIONSHIPS ---
+  devices           UserDevice[]      // One user can have multiple devices
+  validationCode    ValidationCode?   // One user has one active pending code at a time
+  readNotifications NotificationRead[]
+  favorites         Favorite[]
+  systemChanges     SystemChange[]
+}
+
+// --- NEW MODEL: DEVICE MANAGEMENT ---
+model UserDevice {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  deviceId    String       @unique // The unique ID from the phone
+  pushToken   String?      @unique
+  deviceName  String?      // e.g., "Ahmad's iPhone"
+  deviceModel String?      // e.g., "iPhone 13"
+  brand       String?      // e.g., "Apple"
+  
+  status      DeviceStatus @default(PENDING) // Soft delete/Block logic
+  lastUsed    DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+
+  @@unique([userId, deviceId]) // Prevents duplicate entries for the same user/phone
+}
+
+// --- NEW MODEL: MANUAL OTP TRACKING ---
+model ValidationCode {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique // Ensures one code row per user (overwriting logic)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  code      String   // The 4-6 digit code
+  deviceId  String   @unique // Which device is currently requesting access?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model Phone {
-  id          String   @id // Manual ID (not automatic)
-  brand       Brand    @default(SAMSUNG)
+  id          String   @id
   name        String
   price       Float
-  lastUpdated DateTime @updatedAt // Automatically updates the date on changes
+  lastUpdated DateTime @updatedAt
+  favoritedBy Favorite[]
+  brandId Int
+  brand   Brand  @relation(fields: [brandId], references: [id])
 }
 
-model Notification {
-  id      Int    @id @default(autoincrement())
-  message String
+model Brand {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  phones Phone[]
 }
+
+
+model Notification {
+  id        Int        @id @default(autoincrement())
+  type      ChangeType @default(ADDED)
+  modelName String
+  oldPrice  String?
+  newPrice  String?
+  createdAt DateTime   @default(now())
+  readBy    NotificationRead[]
+}
+
+model NotificationRead {
+  id             Int          @id @default(autoincrement())
+  userId         Int
+  notificationId Int
+  readAt         DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationId])
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  phoneId   String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     Phone    @relation(fields: [phoneId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, phoneId]) // A user can only favorite a specific phone once
+}
+
+
+model SystemChange {
+  id          Int        @id @default(autoincrement())
+  type        ChangeType
+  modelName   String     // e.g., "iPhone 15 Pro"
+  oldValue    String?    // Used for Price (e.g., "5000")
+  newValue    String?    // Used for Price (e.g., "4800")
+  isPublished Boolean    @default(false)
+
+  userId      Int
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+
+  createdAt   DateTime   @default(now())
+}
+
+
+

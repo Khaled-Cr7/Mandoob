@@ -1,26 +1,24 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pkg from 'pg';
-const { Pool } = pkg;
+import { prisma } from '../index';
+
 
 const router = express.Router();
 
-// 1. Set up the connection pool (The Bridge)
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-
-// 2. Pass the adapter to Prisma (This fixes your error!)
-const prisma = new PrismaClient({ adapter });
 
 // 1. GET ALL USERS
 router.get('/', async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, role } = req.query;
+    
+    // 1. Decide which role to look for (default to USER if nothing sent)
+    const targetRole = (role === 'ADMIN') ? 'ADMIN' : 'USER';
+
     const users = await prisma.user.findMany({
       where: {
-        role: 'USER',
-        // We use AND to ensure role is ALWAYS USER, then filter by search if it exists
+        role: targetRole,
+        // 2. CRITICAL: Hide the Super Admin (ID 1) from the list
+        id: { not: 1 }, 
+        
         ...(search ? {
           OR: [
             { name: { contains: String(search), mode: 'insensitive' } },
@@ -33,26 +31,43 @@ router.get('/', async (req, res) => {
     res.json(users);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Failed to fetch personnel" });
+    res.status(500).json({ message: "Failed to fetch users" });
   }
 });
 
-// 2. CREATE NEW USER
 router.post('/', async (req, res) => {
   try {
-    const { name, username, password, phoneNumber } = req.body;
-    const cleanUsername = username.toLowerCase().trim();
+    let { name, username, password, phoneNumber, role } = req.body;
+
+    // 1. Clean and Validate Inputs
+    name = name?.trim();
+    username = username?.toLowerCase().trim();
+    phoneNumber = phoneNumber?.trim();
+
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    const phoneRegex = /^05\d{8}$/;
+    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
+
+    if (!name || name.length > 50) return res.status(400).json({ message: "Invalid Name" });
+    if (!usernameRegex.test(username)) return res.status(400).json({ message: "Invalid Username format" });
+    if (!passRegex.test(password)) return res.status(400).json({ message: "Password too weak" });
+    if (!phoneRegex.test(phoneNumber)) return res.status(400).json({ message: "Invalid Phone format" });
+
+    const targetRole = (role === 'ADMIN') ? 'ADMIN' : 'USER';
     
-    // Generate avatar URL based on name
-    const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fbbf24`;
+    // Avatar Logic (using the cleaned name)
+    const avatar = targetRole === 'ADMIN' 
+      ? `https://ui-avatars.com/api/?name=Admin&background=475569&color=fff` 
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fbbf24`;
 
     const newUser = await prisma.user.create({
-      data: { name, username: cleanUsername, password, avatar, phoneNumber, role: 'USER' }
+      data: { name, username, password, avatar, phoneNumber, role: targetRole }
     });
-    
-    res.json(newUser);
-  } catch (error) {
-    res.status(400).json({ message: "Username already exists" });
+
+    return res.json(newUser);
+  } catch (error: any) {
+    if (error.code === 'P2002') return res.status(400).json({ message: "Username is already taken" });
+    res.status(500).json({ message: "System Error" });
   }
 });
 
@@ -60,25 +75,34 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, username, password, phoneNumber } = req.body;
-
-    // Create an empty object for updates
+    let { name, username, password, phoneNumber } = req.body;
     const updatedData: any = {};
 
-    // 1. Only add name if it exists
-    if (name) updatedData.name = name;
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    const phoneRegex = /^05\d{8}$/;
+    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
 
-    // 2. Only clean and add username if it's provided
-    if (username) {
-      updatedData.username = username.toLowerCase().trim();
+    if (name) {
+      if (name.trim().length > 50) return res.status(400).json({ message: "Name too long" });
+      updatedData.name = name.trim();
     }
 
-    // 3. Only update password if provided and not empty
+    if (username) {
+      const cleanUsername = username.toLowerCase().trim();
+      if (!usernameRegex.test(cleanUsername)) return res.status(400).json({ message: "Invalid Username" });
+      updatedData.username = cleanUsername;
+    }
+
     if (password && password.trim() !== "") {
+      if (!passRegex.test(password)) return res.status(400).json({ message: "Password too weak" });
       updatedData.password = password;
     }
 
-    if (phoneNumber) updatedData.phoneNumber = phoneNumber;
+    if (phoneNumber) {
+      const cleanPhone = phoneNumber.trim();
+      if (!phoneRegex.test(cleanPhone)) return res.status(400).json({ message: "Invalid Phone" });
+      updatedData.phoneNumber = cleanPhone;
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: parseInt(id) },
@@ -87,7 +111,6 @@ router.put('/:id', async (req, res) => {
     
     res.json(updatedUser);
   } catch (error) {
-    // If the error is a duplicate username, Prisma will throw a P2002 error
     res.status(400).json({ message: "Update failed. Username might be taken." });
   }
 });
