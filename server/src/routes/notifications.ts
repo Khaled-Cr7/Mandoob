@@ -84,8 +84,7 @@ router.post('/register-token', async (req, res) => {
   const { userId, deviceId, pushToken } = req.body;
 
   try {
-    // updateMany is safer because it won't create a new 'ACTIVE' record 
-    // if the device doesn't already exist in the userDevice table.
+    // Attempt updating assuming the hardware entry was initialized during login/device sync
     const result = await prisma.userDevice.updateMany({
       where: {
         userId: Number(userId),
@@ -97,8 +96,18 @@ router.post('/register-token', async (req, res) => {
       },
     });
 
+    // Fallback: Create row immediately if it's a first-time native launch registration
     if (result.count === 0) {
-      console.log(`⚠️ No device found for UID ${userId} to sync token.`);
+      console.log(`⚠️ Initializing a fresh userDevice record for UID ${userId}`);
+      await prisma.userDevice.create({
+        data: {
+          userId: Number(userId),
+          deviceId: String(deviceId),
+          pushToken: pushToken,
+          status: "ACTIVE", // Match your standard system enum status token
+          lastUsed: new Date(),
+        }
+      });
     }
 
     res.json({ success: true });
