@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshControl } from 'react-native';
 import i18n from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSession } from '@/hooks/useSession';
+import { useSession } from '../../context/SessionContext';
 import * as Application from 'expo-application';
 import { handleLanguageToggle } from '../../utils/language';
 

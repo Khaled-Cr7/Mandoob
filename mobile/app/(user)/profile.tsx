@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { API_URL, BASE_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl } from 'react-native';
-import { useSession } from '@/hooks/useSession';
+import { useSession } from '../../context/SessionContext';
 import { handleLanguageToggle } from '../../utils/language';
 import { Image } from 'expo-image';
 

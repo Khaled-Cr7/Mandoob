@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
 import * as Notifications from 'expo-notifications';
 import { syncPushToken } from '../utils/push'; 
-import { useSession } from '@/hooks/useSession'; 
+import { SessionProvider, useSession } from '../context/SessionContext';
 import * as Application from 'expo-application';
 import { API_URL } from '../constants';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +28,15 @@ Notifications.setNotificationHandler({
 let globalAlertActive = false;
 
 export default function RootLayout() {
-  const { userId, loading, logout } = useSession();
+   return (
+    <SessionProvider>
+      <RootLayoutInner />
+    </SessionProvider>
+  );
+}
+
+function RootLayoutInner() {
+  const { userId, userRole, loading, logout, signIn } = useSession();
   const { t } = useTranslation();
   const segments = useSegments();
   const [isReady, setIsReady] = useState(false);
@@ -61,6 +69,24 @@ export default function RootLayout() {
       }
     };
     initializeLayout();
+  }, []);
+
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        const update = await Updates.checkForUpdateAsync();
+        if (update.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch (e) {
+        console.log('OTA update check failed:', e);
+      }
+    };
+
+    if (!__DEV__) {
+      checkForUpdates();
+    }
   }, []);
 
   // --- 2. Guardian Heartbeat (Security Check) ---
@@ -152,17 +178,19 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isReady || loading) return;
 
-    const inAuthGroup = segments[0] === "(auth)";
+    const inAuthGroup = segments[0] === '(auth)';
 
     if (!userId && !inAuthGroup) {
-      // 1. Not logged in -> Go to Login
-      router.replace("/(auth)/login");
-    } else if (userId && inAuthGroup) {
-      // 2. Logged in but trying to see Login screen -> Redirect to Home
-      // You might need a "fetchRole" here or get it from your session
-      router.replace("/(user)"); 
+      router.replace('/(auth)/login');
+    } else if (userId && userRole && inAuthGroup) {
+      // ✅ Only redirect when BOTH userId AND userRole are present
+      if (userRole === 'ADMIN') {
+        router.replace('/(admin)');
+      } else {
+        router.replace('/(user)');
+      }
     }
-  }, [userId, loading, isReady, segments]);
+  }, [userId, userRole, loading, isReady, segments]);
 
 
   // --- 4. Render Logic ---

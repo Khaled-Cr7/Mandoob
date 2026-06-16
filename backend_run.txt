@@ -1,0 +1,1 @@
+pm2 start start-app.bat --name mandoob-backend

@@ -11,7 +11,7 @@ import i18n from '@/i18n';
 import * as Updates from 'expo-updates';
 import * as Application from 'expo-application';
 import { handleLanguageToggle } from '../../utils/language';
-import { useSession } from '@/hooks/useSession';
+import { useSession } from '../../context/SessionContext';
 
 const UserAvatar = ({ item, baseUrl }: { item: any, baseUrl: string }) => {
   const [loading, setLoading] = useState(false); // Default to false

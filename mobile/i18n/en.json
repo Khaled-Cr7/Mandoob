@@ -200,5 +200,8 @@
   "new_code_sent": "New code sent successfully",
   "resend_code": "Resend Code",
   "verifying": "Verifying...",
-  "invalid_price_msg": "Please enter a valid price"
+  "invalid_price_msg": "Please enter a valid price",
+  "added_msg": "Item has been added successfully.",
+  "updated_msg": "Item has been updated successfully.",
+  "fill_all_fields": "Please fill in all required fields."
 }
