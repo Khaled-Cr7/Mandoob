@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "Mandoob_App",
+    "name": "Kunooz Mandoob",
     "slug": "Mandoob_App",
-    "version": "1.0.0",
+    "version": "1.0.2",
+    
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mandoobapp",
@@ -12,18 +13,13 @@
       "supportsTablet": true
     },
     "android": {
+      "versionCode": 3,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#3b82f6",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "package": "com.khaled891.Mandoob_App"
     },
     "plugins": [
       "expo-router",
@@ -33,24 +29,25 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#E6F4FE"
         }
       ],
       "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false
     },
     "extra": {
-      "router": {},
       "eas": {
         "projectId": "5bb05100-30db-49d5-afca-61dfe667f20d"
       }
     },
-    "owner": "khaled891"
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5bb05100-30db-49d5-afca-61dfe667f20d"
+    }
   }
 }

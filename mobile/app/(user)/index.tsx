@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import {RefreshControl} from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSession } from '@/hooks/useSession';
+import { useSession } from '../../context/SessionContext';
 
 export default function UserInventoryScreen() {
   const { userId } = useSession() || "11";

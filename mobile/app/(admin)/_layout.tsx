@@ -1,9 +1,18 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useSession } from '../../context/SessionContext';
 
 export default function AdminLayout() {
   const {t} = useTranslation();  
+  const { userRole, loading } = useSession();
+
+  if (loading) return null;
+
+  if (userRole !== 'ADMIN') {
+    return <Redirect href="/(user)" />;
+  }
+
   return (
     <Tabs screenOptions={{ 
       headerShown: false,

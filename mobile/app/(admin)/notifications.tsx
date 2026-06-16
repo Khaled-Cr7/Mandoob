@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useSession } from '@/hooks/useSession';
+import { useSession } from '../../context/SessionContext';
 
 export default function NotificationListScreen() {
   const { t } = useTranslation();

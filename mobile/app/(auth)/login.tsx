@@ -9,6 +9,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import * as Application from 'expo-application';
 import { Platform } from 'react-native';
+import { useSession } from '../../context/SessionContext';
 
 export default function LoginScreen() {
   const { t } = useTranslation();
@@ -17,6 +18,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { signIn } = useSession();
 
   const handleLogin = async () => {
   setLoading(true);
@@ -80,17 +82,14 @@ export default function LoginScreen() {
     const data = await response.json();
 
     if (response.ok) {
-      await AsyncStorage.setItem('userId', String(data.id));
-
       if (data.needsOTP) {
         router.replace({ 
           pathname: '/(auth)/otp', 
           params: { userId: String(data.id), deviceId: deviceData.deviceId } 
         });
       } else {
-        // Standard successful login
-        const target = data.role === 'ADMIN' ? '/(admin)' : '/(user)';
-        router.replace(target);
+        // ✅ Just call signIn — _layout handles navigation automatically
+        await signIn(String(data.id), data.role);
       }
     } else {
       // 🛡️ Enhanced Error Handling
@@ -199,6 +198,9 @@ export default function LoginScreen() {
         {/* Subtle Footer */}
         <Text className="text-center text-slate-400 text-[10px] font-bold uppercase mt-8 tracking-widest">
           {t('system_version')}
+        </Text>
+        <Text className="text-center text-slate-400 text-[10px] font-bold uppercase mt-8 tracking-widest">
+          Update ID: dfda3374 (test 3)
         </Text>
       </View>
     </View>

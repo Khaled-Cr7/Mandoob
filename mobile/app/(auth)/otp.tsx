@@ -5,8 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSession } from '../../context/SessionContext';
 
 export default function OTPScreen() {
+  const { signIn } = useSession();
   const { t } = useTranslation();
   const router = useRouter();
   const { userId, deviceId } = useLocalSearchParams();
@@ -192,49 +194,39 @@ export default function OTPScreen() {
     }
   };
 
-  // 3. VERIFY THE CODE
   const verifyCode = async () => {
-  setLoading(true);
-  try {
-    const fullCode = userEnteredCode.join('');
-    const res = await fetch(`${API_URL}/security/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, deviceId, code: fullCode })
-    });
+    setLoading(true);
+    try {
+      const fullCode = userEnteredCode.join('');
+      const res = await fetch(`${API_URL}/security/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, deviceId, code: fullCode }),
+      });
 
-    const data = await res.json(); // Get user data (including role) from response
+      const data = await res.json();
 
-    if (res.ok) {
-      // 1. Persist the ID immediately (just like in Login)
-      await AsyncStorage.setItem('userId', String(data.userId || userId));
-
-      // 2. Logic to route based on Role
-      if (data.role === 'ADMIN') {
-        router.replace('/(admin)');
+      if (res.ok) {
+        // ✅ Just call signIn — _layout handles navigation automatically
+        await signIn(String(data.userId || userId), data.role);
+        // ❌ DELETE any router.replace here
       } else {
-        router.replace(`/(user)?userId=${userId}`);
+        Alert.alert(t('error'), t('invalid_code'));
       }
-      
-      console.log("Verified as:", data.role);
-    } else {
-      Alert.alert(t('error'), t('invalid_code') || "Invalid code. Please try again.");
+    } catch (e) {
+      Alert.alert(t('error'), t('connection_error'));
+    } finally {
+      setLoading(false);
     }
-  } catch (e) {
-    Alert.alert(t('error'), t('connection_error'));
-  } finally {
-    setLoading(false);
-  }
+  };
 
-
+  // 2. NOW call the useEffect (outside the function)
   useEffect(() => {
     const fullCode = userEnteredCode.join('');
     if (fullCode.length === 4) {
-      verifyCode(); // Trigger automatically when all 4 boxes are full
+      verifyCode(); 
     }
   }, [userEnteredCode]);
-
-};
 
 
   // --- RENDER DENIED STATE ---
