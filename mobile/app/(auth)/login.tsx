@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -132,9 +132,11 @@ export default function LoginScreen() {
     <View className="flex-1 bg-slate-50 justify-center px-8">
       {/* --- BRANDING SECTION --- */}
       <View className="items-center mb-12">
-        <View className="bg-blue-600 w-20 h-20 rounded-[24px] items-center justify-center shadow-lg shadow-blue-500/40 mb-6">
-          <Ionicons name="cube" size={40} color="white" />
-        </View>
+        <Image 
+          source={require('../../assets/images/k_logo.png')} 
+          className="w-36 h-36 mb-6"
+          resizeMode="contain"
+        />
         <Text className="text-blue-600 text-[10px] font-black uppercase tracking-[4px] mb-1">
           Kunooz Albaraka
         </Text>
