@@ -27,7 +27,7 @@ router.post('/login', async (req, res) => {
       where: { deviceId }
     });
 
-    const isExceptionDevice = deviceId === 'UNKNOWN_ID' || deviceId === 'YOUR_SPECIAL_DEVICE_ID_HERE';
+    const isExceptionDevice = deviceId === 'UNKNOWN_ID' || deviceId === '24d1fec2af727c32';
 
     if (existingDeviceOwner && existingDeviceOwner.userId !== user.id && !isExceptionDevice) {
       return res.status(403).json({ 
