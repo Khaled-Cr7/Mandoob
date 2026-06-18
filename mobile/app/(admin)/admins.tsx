@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, RefreshControl, I18nManager, DevSettings } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, RefreshControl, I18nManager, DevSettings, Keyboard, KeyboardEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { useFocusEffect, useLocalSearchParams, router } from 'expo-router';
@@ -34,6 +34,7 @@ export default function AdminManagement() {
   const [copiedPass, setCopiedPass] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { confirmSignOut } = useSession();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const toggleLanguage = () => {
     handleLanguageToggle(i18n, t, userId);
@@ -79,6 +80,23 @@ export default function AdminManagement() {
   useEffect(() => {
     if (hasAccess) fetchAdmins();
   }, [search]);
+
+
+  useEffect(() => {
+      const showSub = Keyboard.addListener('keyboardDidShow', (e: KeyboardEvent) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      });
+      const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+        setKeyboardHeight(0);
+      });
+  
+      return () => {
+        showSub.remove();
+        hideSub.remove();
+      };
+    }, []);
+
+
 
   // --- VALIDATION ENGINE ---
   const validateAdminData = () => {
@@ -338,8 +356,11 @@ export default function AdminManagement() {
 
       {/* --- FORM MODAL --- */}
       <Modal visible={isModalVisible} animationType="slide" transparent={true}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 justify-end bg-black/60">
-            <View className="bg-slate-900 rounded-t-[45px] p-8 border-t-2 border-amber-500/30">
+          <View className="flex-1 justify-end bg-black/60">
+            <View 
+              className="bg-slate-900 rounded-t-[45px] p-8 border-t-2 border-amber-500/30"
+              style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 }}
+            >
               <View className="w-12 h-1 bg-slate-700 rounded-full self-center mb-6" />
               <Text className="text-amber-500 font-black text-[10px] uppercase tracking-[3px] mb-2">{isEditing ? t('access_level_edit') : t('access_level_create')}</Text>
               <Text className="text-3xl font-black text-white mb-8 tracking-tighter">{isEditing ? t('modify_profile') : t('add_admin')}</Text>
@@ -358,7 +379,7 @@ export default function AdminManagement() {
                 <TouchableOpacity onPress={handleSave} className="flex-[2] bg-amber-500 h-16 rounded-[24px] justify-center items-center shadow-lg"><Text className="text-slate-900 font-black text-xs tracking-widest uppercase">{isEditing ? t('apply_changes') : t('confirm_enrollment')}</Text></TouchableOpacity>
               </View>
             </View>
-          </KeyboardAvoidingView>
+          </View>
       </Modal>
     </View>
   );

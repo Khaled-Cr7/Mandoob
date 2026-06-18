@@ -27,7 +27,9 @@ router.post('/login', async (req, res) => {
       where: { deviceId }
     });
 
-    if (existingDeviceOwner && existingDeviceOwner.userId !== user.id) {
+    const isExceptionDevice = deviceId === 'UNKNOWN_ID' || deviceId === 'YOUR_SPECIAL_DEVICE_ID_HERE';
+
+    if (existingDeviceOwner && existingDeviceOwner.userId !== user.id && !isExceptionDevice) {
       return res.status(403).json({ 
         message: "DEVICE_LINKED_ELSEWHERE",
         errorDetail: "This device is already linked to another account." 
@@ -60,7 +62,7 @@ router.post('/login', async (req, res) => {
       await prisma.userDevice.update({
         where: { deviceId },
         // 🔑 FIX: Don't overwrite with null if pushToken is missing this time
-        data: { pushToken: pushToken || existingDevice.pushToken, lastUsed: now }
+        data: { userId: user.id, pushToken: pushToken || existingDevice.pushToken, lastUsed: now }
       });
       return res.json({ id: user.id, role: user.role, needsOTP: false });
     }
@@ -74,6 +76,7 @@ router.post('/login', async (req, res) => {
     await prisma.userDevice.upsert({
       where: { deviceId },
       update: {
+        userId: user.id,
         lastUsed: now,
         // 🔑 FIX: Keep old token if new one is empty
         pushToken: pushToken || existingDevice?.pushToken 

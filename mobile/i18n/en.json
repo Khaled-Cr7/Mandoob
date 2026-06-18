@@ -203,5 +203,6 @@
   "invalid_price_msg": "Please enter a valid price",
   "added_msg": "Item has been added successfully.",
   "updated_msg": "Item has been updated successfully.",
-  "fill_all_fields": "Please fill in all required fields."
+  "fill_all_fields": "Please fill in all required fields.",
+  "admins": "Admins"
 }
