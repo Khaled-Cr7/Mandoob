@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, Alert, ScrollView, ActivityIndicator, Keyboard, KeyboardEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { API_URL, BASE_URL } from '../../constants';
@@ -45,6 +45,7 @@ export default function ProfileScreen() {
   const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [refreshing, setRefreshing] = useState(false);
   const [cacheKey, setCacheKey] = useState(Date.now());
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const { confirmSignOut } = useSession();
 
@@ -143,6 +144,20 @@ export default function ProfileScreen() {
   };
 
   useEffect(() => {
+      const showSub = Keyboard.addListener('keyboardDidShow', (e: KeyboardEvent) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      });
+      const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+        setKeyboardHeight(0);
+      });
+  
+      return () => {
+        showSub.remove();
+        hideSub.remove();
+      };
+    }, []);
+
+  useEffect(() => {
     if (userId) {
       fetchUserProfile();
     }
@@ -194,6 +209,7 @@ export default function ProfileScreen() {
       <ActivityIndicator size="large" color="#3b82f6" />
     </View>
   );
+
 
 
   return (
@@ -283,22 +299,24 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <Modal visible={passModalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 justify-end bg-black/60">
-          <View className="bg-white rounded-t-[50px] p-10 border-t border-slate-200">
+      <Modal visible={passModalVisible} animationType="slide" transparent={true} statusBarTranslucent={true}>
+         <View className="flex-1 justify-end bg-black/60"> 
+          <View className="bg-white rounded-t-[50px] p-10 border-t border-slate-200"
+            style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 }}
+          >
             <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-8" />
             <Text className="text-3xl font-black text-slate-900 mb-2 tracking-tighter">{t('new_password')}</Text>
             <Text className="text-slate-400 text-xs font-bold mb-10 uppercase tracking-widest">{t('update_security')}</Text>
             <View className="gap-y-5">
-              <TextInput placeholder={t('new_password')} autoCapitalize="none" secureTextEntry className="bg-slate-50 p-5 rounded-3xl border border-slate-100 font-bold" value={passwordData.newPassword} onChangeText={(v) => setPasswordData({...passwordData, newPassword: v.trim()})} />
-              <TextInput placeholder={t('repeat_password')} autoCapitalize="none" secureTextEntry className="bg-slate-50 p-5 rounded-3xl border border-slate-100 font-bold" value={passwordData.confirmPassword} onChangeText={(v) => setPasswordData({...passwordData, confirmPassword: v.trim()})} />
+              <TextInput placeholder={t('new_password')} autoCapitalize="none" secureTextEntry className="bg-slate-50 p-5 rounded-3xl border border-slate-100 font-bold"  style={{ color: '#0f172a' }} placeholderTextColor="#94a3b8" value={passwordData.newPassword} onChangeText={(v) => setPasswordData({...passwordData, newPassword: v.trim()})} />
+              <TextInput placeholder={t('repeat_password')} autoCapitalize="none" secureTextEntry className="bg-slate-50 p-5 rounded-3xl border border-slate-100 font-bold" style={{ color: '#0f172a' }} placeholderTextColor="#94a3b8" value={passwordData.confirmPassword} onChangeText={(v) => setPasswordData({...passwordData, confirmPassword: v.trim()})} />
             </View>
             <View className="flex-row mt-12 gap-x-4">
               <TouchableOpacity onPress={() => setPassModalVisible(false)} className="flex-1 h-16 rounded-[24px] justify-center items-center border border-slate-200"><Text className="text-slate-400 font-black text-xs uppercase">{t('cancel')}</Text></TouchableOpacity>
               <TouchableOpacity onPress={handleUpdatePassword} className="flex-[2] bg-blue-600 h-16 rounded-[24px] justify-center items-center shadow-lg"><Text className="text-white font-black text-xs uppercase tracking-widest">{t('save')}</Text></TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+         </View>
       </Modal>
 
       <Modal visible={uploadModalVisible} animationType="slide" transparent>

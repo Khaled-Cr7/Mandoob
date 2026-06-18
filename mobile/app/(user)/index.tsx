@@ -8,6 +8,7 @@ import { router, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-ro
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSession } from '../../context/SessionContext';
 
+
 export default function UserInventoryScreen() {
   const { userId } = useSession() || "11";
   const [activeTab, setActiveTab] = useState<'ALL' | 'FAVORITES'>('ALL');

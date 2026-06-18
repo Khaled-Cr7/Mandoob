@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform, DevSettings } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform, DevSettings, Keyboard, KeyboardEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { router, useFocusEffect } from 'expo-router';
@@ -29,7 +29,7 @@ export default function AdminPhoneManagement() {
   const { userId } = useSession() || {};
   const [unreadCount, setUnreadCount] = useState(0);
   const { confirmSignOut } = useSession();
-
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // --- NEW: FORM & MODAL STATES ---
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -301,6 +301,20 @@ export default function AdminPhoneManagement() {
     }
   };
 
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e: KeyboardEvent) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   return (
     <View className="flex-1 bg-slate-900">
       
@@ -520,12 +534,13 @@ export default function AdminPhoneManagement() {
       </View>
 
       {/* --- ADD / EDIT SYSTEM MODAL --- */}
-      <Modal visible={isModalVisible} animationType="slide" transparent={true}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-          className="flex-1 justify-end bg-black/60"
-        >
-          <View className="bg-slate-900 rounded-t-[45px] p-8 border-t-2 border-amber-500/30">
+      <Modal visible={isModalVisible} animationType="slide" transparent={true} statusBarTranslucent={true}>
+        <View 
+        className="flex-1 justify-end bg-black/60">
+          <View 
+            className="bg-slate-900 rounded-t-[45px] p-8 border-t-2 border-amber-500/30"
+            style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 }}
+          >
             <View className="w-12 h-1 bg-slate-700 rounded-full self-center mb-6" />
             
             <Text className="text-amber-500 font-black text-[10px] uppercase tracking-[3px] mb-2">
@@ -605,7 +620,7 @@ export default function AdminPhoneManagement() {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       

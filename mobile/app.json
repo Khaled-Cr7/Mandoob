@@ -14,7 +14,7 @@
     },
     "android": {
       "versionCode": 3,
-      "softwareKeyboardLayoutMode": "resize",
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF", 
         "foregroundImage": "./assets/images/k_logo.png"
