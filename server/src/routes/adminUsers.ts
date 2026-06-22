@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
       where: {
         role: targetRole,
         // 2. CRITICAL: Hide the Super Admin (ID 1) from the list
-        id: { not: 1 }, 
+        id: { not: { in: [1, 4] } },
         
         ...(search ? {
           OR: [
