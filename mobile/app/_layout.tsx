@@ -135,7 +135,7 @@ function RootLayoutInner() {
           onPress: async () => {
             await logout(); 
             globalAlertActive = false;
-            clearInterval(intervalId);
+            if (intervalId) clearInterval(intervalId);
           } 
         }], 
         { cancelable: false }
@@ -159,7 +159,10 @@ function RootLayoutInner() {
   // 3. Simple, synchronous cleanup
   return () => {
     if (subscription) subscription.remove();
-    if (intervalId) clearInterval(intervalId);
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
   };
 }, [userId, loading, segments]);
   

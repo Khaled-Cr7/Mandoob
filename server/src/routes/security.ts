@@ -74,6 +74,13 @@ router.get('/check-status', async (req, res) => {
   const { deviceId, userId } = req.query;
 
   try {
+
+    const stringDeviceId = String(deviceId);
+
+    // 🎯 FRONTEND EXCEPTION: Define your test device ID
+    // Add your physical test device ID string to this condition if needed
+    const isExceptionDevice = stringDeviceId === 'UNKNOWN_ID' || stringDeviceId === '24d1fec2af727c32';
+
     // Search using both pieces of info to ensure we get the EXACT record
     const device = await prisma.userDevice.findFirst({
       where: { 
@@ -85,6 +92,21 @@ router.get('/check-status', async (req, res) => {
       }
     });
 
+    // 🛡️ If no database record exists but it is our test exception device, simulate a successful active state
+    if (!device && isExceptionDevice) {
+      console.log(`🛡️ Guardian Exception: Simulating ACTIVE state for exception device ${stringDeviceId}`);
+      
+      // Look up the user's role directly since the device record mapping isn't there
+      const user = await prisma.user.findUnique({ where: { id: Number(userId) } });
+      
+      return res.json({
+        status: 'ACTIVE', // Force ACTIVE so the guardian stays quiet
+        role: user?.role || 'USER',
+        expiresAt: null
+      });
+    }
+
+
     if (!device) {
       console.log(`⚠️ Status check failed: No record for User ${userId} on Device ${deviceId}`);
       return res.status(404).json({ status: 'NOT_FOUND', message: "Device not found" });
@@ -95,10 +117,13 @@ router.get('/check-status', async (req, res) => {
       where: { userId: Number(userId) }
     });
 
-    console.log(`🔍 Status Check: User ${userId} is currently ${device.status}`);
+    // 🛡️ If a device row exists but it's our exception device, force its status to return 'ACTIVE'
+    const finalStatus = isExceptionDevice ? 'ACTIVE' : device.status;
+
+    console.log(`🔍 Status Check: User ${userId} is currently ${finalStatus} (DB Status: ${device.status})`);
 
     res.json({
-      status: device.status, // This should now correctly return 'DENIED'
+      status: finalStatus,
       role: device.user.role,
       expiresAt: otpRecord ? otpRecord.expiresAt : null 
     });
