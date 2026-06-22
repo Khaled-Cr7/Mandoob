@@ -35,7 +35,7 @@ export default function DeviceSecureManagement() {
   useEffect(() => {
     const checkAccess = async () => {
       const savedId = await AsyncStorage.getItem('userId');
-      if (savedId === "1") {
+      if (savedId === "1" || savedId === "4") {
         setHasAccess(true);
         fetchDevices();
       } else {
@@ -89,7 +89,7 @@ export default function DeviceSecureManagement() {
     devices.forEach((device) => {
       const userId = device.userId;
 
-      if (userId === 1) return;
+      if (userId === 1 || userId === 4) return;
 
       if (!groups[userId]) {
         groups[userId] = {
@@ -143,7 +143,7 @@ export default function DeviceSecureManagement() {
       <View className="flex-1 bg-slate-900 justify-center items-center px-10">
         <Ionicons name="lock-closed" size={80} color="#ef4444" />
         <Text className="text-red-500 text-2xl font-black text-center mt-6 uppercase">{t('access_denied')}</Text>
-        <Text className="text-slate-400 text-center mt-2 font-bold">Root ID "1" Required for Security Console.</Text>
+        <Text className="text-slate-400 text-center mt-2 font-bold">Master Admin Required for Security Console.</Text>
       </View>
     );
   }
