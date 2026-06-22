@@ -74,7 +74,7 @@ router.delete('/brands/:id', async (req, res) => {
 // --- SYSTEM CHANGES LOGGING ROUTE ---
 router.get('/changes', async (req, res) => {
   const { userId } = req.query;
-  const isAdminOne = Number(userId) === 1;
+  const isAdminOne = Number(userId) === 1 || Number(userId) === 4; // User 1 and User 4 are Super Admins who see everything
 
   try {
     const changes = await prisma.systemChange.findMany({

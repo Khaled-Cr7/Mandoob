@@ -172,7 +172,7 @@ export default function SystemChangesScreen() {
         )}
 
         {/* --- SECTION 2: GLOBAL AUDIT LOG (Super Admin) --- */}
-        {Number(userId) === 1 || Number(userId) === 4 && (
+        {(Number(userId) === 1 || Number(userId) === 4) && (
           <>
             <View className="h-[1px] bg-slate-200 w-full my-6" />
             <Text className="text-[10px] font-black text-slate-500 uppercase tracking-[2px] mb-4 ml-2">
