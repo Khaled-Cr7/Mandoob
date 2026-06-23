@@ -301,11 +301,11 @@ export default function PersonnelManagement() {
           <View className="flex-row justify-between items-center mb-6">
             <View>
               <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">{t('system_admin')}</Text>
-              <Text className="text-3xl font-black text-white  mb-6">{t('personnel')}</Text>
+              <Text className="text-3xl font-black text-white">{t('personnel')}</Text>
             </View>          
           </View>
         {/* Search Bar */}
-        <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-14 mb-6 border border-slate-700 shadow-inner">
+        <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-14 border border-slate-700 shadow-inner">
           <Ionicons name="search" size={20} color="#64748b" />
           <TextInput 
             placeholder={t('search_dot')} 

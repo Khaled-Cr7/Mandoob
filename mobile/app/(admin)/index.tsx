@@ -360,7 +360,7 @@ export default function AdminPhoneManagement() {
         </View>
         
         {/* Integrated Search */}
-        <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-14 mb-6 border border-slate-700 shadow-inner">
+        <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-14 mb-2 border border-slate-700 shadow-inner">
           <Ionicons name="search" size={20} color="#64748b" />
           <TextInput 
             placeholder={t('search_dot')} 
@@ -377,8 +377,8 @@ export default function AdminPhoneManagement() {
         </View>
 
         {/* Brand Scrollbox */}
-        <View className="mb-6">
-          <View className="flex-row justify-between items-end mb-3 mt-4">
+        <View className="mb-1">
+          <View className="flex-row justify-between items-end mb-3 mt-2">
             <View>
               <Text className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">
                 {t('filter_source')}
@@ -462,37 +462,62 @@ export default function AdminPhoneManagement() {
 
         <FlatList
           data={phones}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 120 }} // Slightly more breathing room for the floating action button
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
           }
           renderItem={({ item } : any) => (
-            <View className="mx-6 mb-3 p-5 bg-white rounded-[28px] border border-slate-100 shadow-sm flex-row justify-between items-center">
-              <View className="flex-1">
-                <Text className="text-[10px] font-black text-amber-600 mb-1 tracking-tighter">{t('ref')}: {item.id}</Text>
-                <Text className="text-lg font-black text-slate-900 leading-5 mb-2" numberOfLines={1}>{item.name}</Text>
+            <View className="mx-6 mb-2 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm flex-row justify-between items-center">
+             {/* LEFT COLUMN: Main Specs */}
+              <View className="flex-1 min-w-0 pr-2">
+                {/* Reference ID isolated cleanly at the top */}
+                <View className="flex-row items-baseline mb-0.5">
+                  <Text className="text-[9px] font-black text-slate-900 uppercase">
+                    {t('ref') + ":"}
+                  </Text>
+                  <Text className="text-[9px] font-black text-amber-600 tracking-tighter">
+                    {item.id}
+                  </Text>
+                </View>
+
+                {/* Model Name gets its own line, scaling cleanly */}
+                <Text className="text-base font-black text-slate-900 leading-tight" numberOfLines={1}>
+                  {item.name}
+                </Text>
                 
-                <View className="flex-row">
-                  <View className="bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                    <Text className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{item.brand}</Text>
+                {/* Brand Tag stacked right below the name alone */}
+                <View className="flex-row mt-1">
+                  <View className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                    <Text className="text-[8px] text-slate-500 font-black uppercase tracking-wider">
+                      {item.brand + " "}
+                    </Text>
                   </View>
                 </View>
               </View>
 
-              <View className="items-end ml-4">
-                <View className="flex-row items-baseline">
-                  <Text className="text-xl font-black text-slate-900">{item.price}</Text>
-                  <Text className="text-[10px] font-bold text-slate-400 ml-1">{t('currency')}</Text>
+              {/* RIGHT COLUMN: Pricing & Action Tools */}
+              <View className="flex-row items-center space-x-3 ml-2">
+                {/* Compact Price View */}
+                <View className="items-end">
+                  <View className="flex-row items-baseline">
+                    <Text className="text-lg font-black text-slate-900">{item.price}</Text>
+                    <Text className="text-[9px] font-bold text-slate-400 ml-0.5">{t('currency')}</Text>
+                  </View>
                 </View>
-                <View className="flex-row mt-3 space-x-1">
+
+                {/* Inline, ultra-compact action icon buttons */}
+                <View className="flex-row space-x-1 ml-2">
                   <TouchableOpacity 
-                    onPress={() => openEditModal(item)} // OPEN EDIT
-                    className="p-2.5 bg-slate-900 rounded-xl shadow-lg"
+                    onPress={() => openEditModal(item)} 
+                    className="p-2 bg-slate-900 rounded-lg shadow-sm"
                   >
-                    <Ionicons name="pencil" size={14} color="#fbbf24" />
+                    <Ionicons name="pencil" size={12} color="#fbbf24" />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDelete(item.id)} className="p-2.5 bg-red-50 rounded-xl border border-red-100">
-                    <Ionicons name="trash" size={14} color="#ef4444" />
+                  <TouchableOpacity 
+                    onPress={() => handleDelete(item.id)} 
+                    className="p-2 bg-red-50 rounded-lg border border-red-100"
+                  >
+                    <Ionicons name="trash" size={12} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -501,19 +526,16 @@ export default function AdminPhoneManagement() {
           ListEmptyComponent={
             loading ? <ActivityIndicator size="large" color="#0f172a" className="mt-20" /> : 
             <View className="items-center mt-20 px-10">
-               <Ionicons 
-                name= {search.length > 0 ? "search-outline" : "file-tray-outline"}
+              <Ionicons 
+                name={search.length > 0 ? "search-outline" : "file-tray-outline"}
                 size={40} 
                 color="#cbd5e1" />
-               <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
-                {search.length > 0
-                ? `${t('no_results')} "${search}"`
-                : t('no_inventory_found')}
+              <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+                {search.length > 0 ? `${t('no_results')} "${search}"` : t('no_inventory_found')}
               </Text>
             </View>
           }
         />
-
         {/* --- FIXED FLOATING ACTION BAR --- */}
         <View className="absolute bottom-6 left-6 right-6">
           <TouchableOpacity 

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { View, Text, TextInput, TouchableOpacity, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Keyboard, KeyboardEvent } from 'react-native';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const { signIn } = useSession();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -119,19 +120,26 @@ export default function LoginScreen() {
     }
   };
 
+  useEffect(() => {
+      const showSub = Keyboard.addListener('keyboardDidShow', (e: KeyboardEvent) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      });
+      const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+        setKeyboardHeight(0);
+      });
+  
+      return () => {
+        showSub.remove();
+        hideSub.remove();
+      };
+    }, []);
+
   return (
-    // ✅ KeyboardAvoidingView handles shifting logic based on device platform mechanics
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-      keyboardVerticalOffset={Platform.OS === 'android' ? 25 : 0}
-      className="flex-1 bg-slate-50"
-    >
-      {/* ✅ ScrollView added to enable viewport flexibility when keyboard expands */}
-      <ScrollView 
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-        className="px-8"
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+     <View className="flex-1 bg-slate-50 justify-center px-8">
+      {/* 2. Inner container that applies the keyboard offset dynamically */}
+      <View 
+        style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 }}
+        className="w-full"
       >
         {/* --- BRANDING SECTION --- */}
         <View className="items-center mb-12">
@@ -141,7 +149,7 @@ export default function LoginScreen() {
             resizeMode="contain"
           />
           <Text className="text-blue-600 text-[10px] font-black uppercase tracking-[4px] mb-1">
-            Kunooz Albaraka
+            {t('kunooz')}
           </Text>
           <Text className="text-3xl font-black text-slate-900">
             {t('welcome_back')}
@@ -211,11 +219,8 @@ export default function LoginScreen() {
           <Text className="text-center text-slate-400 text-[10px] font-bold uppercase mt-8 tracking-widest">
             {t('system_version')}
           </Text>
-          <Text className="text-center text-slate-400 text-[10px] font-bold uppercase mt-2 tracking-widest">
-            Update ID: dfda3374 (test 3)
-          </Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </View>        
   );
 }
