@@ -229,7 +229,7 @@ export default function AdminManagement() {
         <View className="flex-row justify-between items-center mb-6">
           <View>
             <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">{t('special_admin')}</Text>
-            <Text className="text-3xl font-black text-white mb-6">{t('admin_management')}</Text>
+            <Text className="text-3xl font-black text-white">{t('admin_management')}</Text>
           </View>
         </View>
         <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-14 border border-slate-700">

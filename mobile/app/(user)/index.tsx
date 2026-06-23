@@ -262,50 +262,53 @@ export default function UserInventoryScreen() {
           )
         }
         renderItem={({ item }: any) => (
-          <View className="mb-4 p-5 bg-white rounded-[32px] border border-slate-100 shadow-sm flex-row justify-between items-center">
+          <View className="mb-2 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm flex-row justify-between items-center">
             
             {/* --- LEFT SECTION: INFO --- */}
-            <View className="flex-1 pr-4">
-              {/* TOP ROW: REF ID & BRAND */}
-              <View className="flex-row items-center mb-1">
-                <Text className="text-[9px] font-black text-blue-500 tracking-widest uppercase">
-                  REF: {item.id}
+            <View className="flex-1 pr-3 min-w-0">
+              {/* TOP ROW: REF ID & BRAND (Items-baseline locks text position perfectly) */}
+              <View className="flex-row items-baseline mb-0.5">
+                <Text className="text-[9px] font-black text-slate-500 uppercase">
+                  {t('ref') + ":"}
                 </Text>
-                <View className="mx-2 w-1 h-1 bg-slate-300 rounded-full" /> 
-                <View className="bg-slate-100 px-2 py-0.5 rounded-md">
-                  <Text className="text-[8px] text-slate-500 font-black uppercase">
-                    {item.brand}
+                <Text className="text-[9px] font-black text-blue-500 tracking-tighter">
+                  {item.id}
+                </Text>
+                <View className="mx-1.5 w-1 h-1 bg-slate-300 rounded-full self-center" /> 
+                <View className="bg-slate-100 px-1.5 py-0.5 rounded">
+                  <Text className="text-[8px] text-slate-500 font-black uppercase tracking-wider">
+                    {item.brand + " "}
                   </Text>
                 </View>
               </View>
               
-              {/* DEVICE NAME */}
-              <Text className="text-xl font-black text-slate-900 leading-6 mb-3" numberOfLines={1}>
+              {/* DEVICE NAME (Stepped down from text-xl to text-base) */}
+              <Text className="text-base font-black text-slate-900 leading-tight mb-2" numberOfLines={1}>
                 {item.name}
               </Text>
 
-              {/* HEART ACTION */}
+              {/* HEART ACTION (Slimmed padding and scaled fonts down) */}
               <TouchableOpacity 
                 onPress={() => toggleFavorite(item.id)} 
-                className={`flex-row items-center self-start px-3 py-1.5 rounded-full border 
+                className={`flex-row items-center self-start px-2 py-1 rounded-full border 
                   ${item.isFavorite ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}
               >
                 <Ionicons 
                   name={item.isFavorite ? "heart" : "heart-outline"} 
-                  size={14} 
+                  size={11} 
                   color={item.isFavorite ? "#ef4444" : "#94a3b8"} 
                 />
-                <Text className={`text-[9px] ml-1.5 font-black uppercase ${item.isFavorite ? 'text-red-500' : 'text-slate-400'}`}>
+                <Text className={`text-[8px] ml-1 font-black uppercase ${item.isFavorite ? 'text-red-500' : 'text-slate-400'}`}>
                   {item.isFavorite ? t('saved') : t('savefavorite')}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* --- RIGHT SECTION: PRICE --- */}
-            <View className="bg-blue-50 p-4 rounded-3xl">
+            {/* --- RIGHT SECTION: PRICE (Made compact to keep card height slim) --- */}
+            <View className="bg-blue-50 px-3 py-2 rounded-2xl ml-2 shrink-0">
               <View className="flex-row items-baseline">
-                <Text className="text-xl font-black text-blue-700">{item.price}</Text>
-                <Text className="text-[8px] font-black text-blue-400 ml-1">{t('currency')}</Text>
+                <Text className="text-lg font-black text-blue-700">{item.price}</Text>
+                <Text className="text-[8px] font-black text-blue-400 ml-0.5">{t('currency')}</Text>
               </View>
             </View>
           </View>
