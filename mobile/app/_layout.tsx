@@ -178,6 +178,12 @@ function RootLayoutInner() {
     return () => subscription.remove();
   }, []);
 
+  // --- 3b. Push Token Sync ---
+  useEffect(() => {
+    if (loading || !userId) return;
+    syncPushToken(Number(userId));
+  }, [userId, loading]);
+
   useEffect(() => {
     if (!isReady || loading) return;
 

@@ -40,6 +40,7 @@ export default function LoginScreen() {
       };
 
       let pushToken = "";
+      let pushDebug = "NOT_ATTEMPTED";
       
       if (Device.isDevice) { 
         try {
@@ -47,23 +48,32 @@ export default function LoginScreen() {
           
           const { status: existingStatus } = await ExpoNotifications.getPermissionsAsync();
           let finalStatus = existingStatus;
+          pushDebug = `existingStatus:${existingStatus}`;
 
           if (existingStatus !== 'granted') {
             const { status } = await ExpoNotifications.requestPermissionsAsync();
             finalStatus = status;
+            pushDebug += `|requested:${status}`;
           }
 
           if (finalStatus === 'granted') {
+            const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+            pushDebug += `|projectId:${projectId || 'MISSING'}`;
             const tokenData = await ExpoNotifications.getExpoPushTokenAsync({
-              projectId: Constants.expoConfig?.extra?.eas?.projectId,
+              projectId,
             });
             pushToken = tokenData.data;
+            pushDebug += `|tokenLength:${pushToken?.length || 0}`;
             console.log("Token generated:", pushToken);
+          } else {
+            pushDebug += `|finalStatus:${finalStatus}_NOT_GRANTED`;
           }
-        } catch (tokenError) {
+        } catch (tokenError: any) {
+          pushDebug += `|ERROR:${tokenError?.message || String(tokenError)}`;
           console.log("Push token error:", tokenError);
         }
       } else {
+        pushDebug = "NOT_A_PHYSICAL_DEVICE";
         console.log("Push notifications skipped: Not a physical device.");
       }
 
@@ -74,7 +84,8 @@ export default function LoginScreen() {
           username: username.toLowerCase().trim(), 
           password: password.trim(),
           ...deviceData,
-          pushToken 
+          pushToken,
+          pushDebug
         }),
       });
 

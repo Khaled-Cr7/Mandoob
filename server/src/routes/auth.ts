@@ -8,7 +8,9 @@ const router = express.Router();
 
 
 router.post('/login', async (req, res) => {
-  let { username, password, deviceId, deviceModel, brand, deviceName, pushToken } = req.body;
+  let { username, password, deviceId, deviceModel, brand, deviceName, pushToken, pushDebug } = req.body;
+
+  console.log(`🔔 [PUSH DEBUG] user=${username} device=${deviceId} pushToken=${pushToken ? pushToken.slice(0, 25) + '...' : 'EMPTY'} debug=${pushDebug}`);
 
   try {
     username = username?.toLowerCase().trim();
@@ -36,6 +38,32 @@ router.post('/login', async (req, res) => {
       });
     }
 
+       // 🛡️ EXCEPTION DEVICE: skip OTP entirely and always log straight in.
+    if (isExceptionDevice) {
+      const now0 = new Date();
+      await prisma.userDevice.upsert({
+        where: { deviceId },
+        update: {
+          userId: user.id,
+          status: 'ACTIVE',
+          lastUsed: now0,
+          pushToken: pushToken || existingDeviceOwner?.pushToken
+        },
+        create: {
+          userId: user.id,
+          deviceId,
+          deviceName,
+          deviceModel,
+          brand,
+          pushToken: pushToken || null,
+          status: 'ACTIVE'
+        }
+      });
+      console.log(`🛡️ Exception device ${deviceId} logged in directly as ACTIVE (OTP skipped)`);
+      return res.json({ id: user.id, role: user.role, needsOTP: false });
+    }
+    
+
     // --- RATE LIMIT CHECK ---
     const existingCode = await prisma.validationCode.findUnique({
       where: { deviceId }
@@ -59,10 +87,12 @@ router.post('/login', async (req, res) => {
 
     // --- CASE 1: SUCCESS (ALREADY ACTIVE) ---
     if (existingDevice && existingDevice.status === 'ACTIVE') {
+      const finalToken = pushToken || existingDevice.pushToken;
+      console.log(`🔔 [PUSH DEBUG] CASE 1 (ACTIVE) writing pushToken=${finalToken ? finalToken.slice(0, 25) + '...' : 'NULL'}`);
       await prisma.userDevice.update({
         where: { deviceId },
         // 🔑 FIX: Don't overwrite with null if pushToken is missing this time
-        data: { userId: user.id, pushToken: pushToken || existingDevice.pushToken, lastUsed: now }
+        data: { userId: user.id, pushToken: finalToken, lastUsed: now }
       });
       return res.json({ id: user.id, role: user.role, needsOTP: false });
     }
@@ -73,13 +103,15 @@ router.post('/login', async (req, res) => {
     }
 
     // --- CASE 3: NEW OR PENDING ---
+    const finalTokenCase3 = pushToken || existingDevice?.pushToken;
+    console.log(`🔔 [PUSH DEBUG] CASE 3 (NEW/PENDING) writing pushToken=${finalTokenCase3 ? finalTokenCase3.slice(0, 25) + '...' : 'NULL'}`);
     await prisma.userDevice.upsert({
       where: { deviceId },
       update: {
         userId: user.id,
         lastUsed: now,
         // 🔑 FIX: Keep old token if new one is empty
-        pushToken: pushToken || existingDevice?.pushToken 
+        pushToken: finalTokenCase3 
       },
       create: {
         userId: user.id,
