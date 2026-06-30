@@ -23,7 +23,7 @@ export async function sendBroadcastNotification(log: any, excludeUserId?: number
     const lang = device.user.language || 'en';
     const isArabic = lang === 'ar';
 
-    let title = isArabic ? "تحديث كنوز" : "Kunooz Update";
+    let title = isArabic ? "تحديث" : "Update";
     let body = "";
 
     // Strictly using the types from your original code
@@ -33,8 +33,8 @@ export async function sendBroadcastNotification(log: any, excludeUserId?: number
         : `Price Update: ${log.modelName} is now ${log.newValue} SAR`;
     } else if (log.type === 'ADDED') {
       body = isArabic 
-        ? `وصول جديد: ${log.modelName} متوفر الآن!` 
-        : `New Arrival: ${log.modelName} is now available!`;
+        ? `هاتف جديد: ${log.modelName} متوفر الآن!` 
+        : `New Phone: ${log.modelName} is now available!`;
     }
 
     if (body) {

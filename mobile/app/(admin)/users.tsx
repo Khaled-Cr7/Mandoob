@@ -95,6 +95,7 @@ export default function PersonnelManagement() {
 
   const onRefresh = useCallback(async () => {
       setRefreshing(true);
+      setSearch('');
       await fetchUsers();
       setRefreshing(false);
     }, []);
@@ -388,9 +389,9 @@ export default function PersonnelManagement() {
         />
 
         {/* --- NEW SPLIT-PANE DETAIL BOX --- */}
-        <Modal visible={viewModalVisible} transparent animationType="fade">
-          <View className="flex-1 justify-center items-center bg-black/80 px-4">
-            <View className="bg-white w-full rounded-[40px] overflow-hidden shadow-2xl">
+         <Modal visible={viewModalVisible} transparent animationType="fade" onRequestClose={() => setViewModalVisible(false)}>
+          <TouchableOpacity className="flex-1 justify-center items-center bg-black/80 px-4" activeOpacity={1} onPress={() => setViewModalVisible(false)}>
+            <TouchableOpacity activeOpacity={1} className="bg-white w-full rounded-[40px] overflow-hidden shadow-2xl">
               
               <View className="flex-row min-h-[220px]">
                 {/* LEFT SIDE: Identity & Phone */}
@@ -446,8 +447,8 @@ export default function PersonnelManagement() {
               <TouchableOpacity onPress={() => setViewModalVisible(false)} className="bg-slate-900 h-14 justify-center items-center">
                 <Text className="text-white font-black text-xs uppercase tracking-widest">{t('close_console')}</Text>
               </TouchableOpacity>
-            </View>
-          </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
         </Modal>
 
         {/* --- ADD NEW USER BUTTON --- */}

@@ -35,6 +35,10 @@ yarn-error.*
 .env*.local
 .env.development
 
+
+mandoob-app1-*.json
+
+
 # typescript
 *.tsbuildinfo
 
