@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +22,7 @@ export default function UserInventoryScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [sortType, setSortType] = useState<'ID' | 'DATE'>('ID');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selectedPhone, setSelectedPhone] = useState<any>(null);
 
   const checkNotifications = async () => {
     if (!userId) return;
@@ -109,6 +110,7 @@ export default function UserInventoryScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setSearch('');
     await fetchPhones(); 
     setRefreshing(false);
   }, [fetchPhones]);
@@ -261,8 +263,14 @@ export default function UserInventoryScreen() {
             </View>
           )
         }
-        renderItem={({ item }: any) => (
-          <View className="mb-2 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm flex-row justify-between items-center">
+       renderItem={({ item, index } : any) => (
+            <View className="mb-2 flex-row items-center">
+              <Text className="text-[10px] font-black text-slate-400 w-5 text-right mr-2">{index + 1}</Text>
+              <TouchableOpacity 
+                onPress={() => setSelectedPhone(item)}
+                activeOpacity={0.7}
+                className="flex-1 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm flex-row justify-between items-center"
+              >
             
             {/* --- LEFT SECTION: INFO --- */}
             <View className="flex-1 pr-3 min-w-0">
@@ -311,9 +319,47 @@ export default function UserInventoryScreen() {
                 <Text className="text-[8px] font-black text-blue-400 ml-0.5">{t('currency')}</Text>
               </View>
             </View>
+            </TouchableOpacity>
           </View>
         )}
       />
+
+      {/* --- PHONE DETAIL POPUP --- */}
+      <Modal visible={!!selectedPhone} animationType="fade" transparent={true} onRequestClose={() => setSelectedPhone(null)}>
+        <TouchableOpacity 
+          className="flex-1 justify-center items-center bg-black/70 px-8"
+          activeOpacity={1}
+          onPress={() => setSelectedPhone(null)}
+        >
+          <TouchableOpacity activeOpacity={1} className="bg-white w-full rounded-[30px] p-6">
+            <View className="flex-row justify-between items-start mb-4">
+              <View className={`px-3 py-1 rounded-full bg-slate-100`}>
+                <Text className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  {selectedPhone?.brand}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedPhone(null)} className="p-1">
+                <Ionicons name="close-circle" size={22} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <Text className="text-[9px] font-black text-blue-500 uppercase mb-1">
+              {t('ref')}: {selectedPhone?.id}
+            </Text>
+            <Text className="text-xl font-black text-slate-900 leading-snug mb-6">
+              {selectedPhone?.name}
+            </Text>
+
+            <View className="flex-row justify-between items-center border-t border-slate-100 pt-4">
+              <Text className="text-slate-400 text-[10px] font-black uppercase">{t('valuation_sar')}</Text>
+              <View className="flex-row items-baseline">
+                <Text className="text-2xl font-black text-slate-900">{selectedPhone?.price}</Text>
+                <Text className="text-[10px] font-bold text-slate-400 ml-1">{t('currency')}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }

@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/images/k_logo.png"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.khaled891.Mandoob_App"
+      "package": "com.khaled891.Mandoob_App",
+      "googleServicesFile": "./google-services.json"
     },
     "plugins": [
       "expo-router",

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "803914563681",
+    "project_id": "mandoob-app1",
+    "storage_bucket": "mandoob-app1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:803914563681:android:67bf2648c3cbc2e620ea20",
+        "android_client_info": {
+          "package_name": "com.khaled891.Mandoob_App"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWEUIixR0VBgzDyOCYDdcVQSyJvjR90Rc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

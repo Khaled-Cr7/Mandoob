@@ -73,6 +73,7 @@ export default function AdminManagement() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setSearch('');
     await fetchAdmins();
     setRefreshing(false);
   }, [search]);
@@ -317,41 +318,57 @@ export default function AdminManagement() {
       </View>
 
       {/* --- DETAIL MODAL --- */}
-      <Modal visible={viewModalVisible} transparent animationType="fade">
-          <View className="flex-1 justify-center items-center bg-black/80 px-4">
-            <View className="bg-white w-full rounded-[40px] overflow-hidden shadow-2xl">
-              <View className="p-8 items-center bg-slate-50 border-b border-slate-100">
-                  <Ionicons name="shield-half" size={60} color="#fbbf24" />
-                  <Text className="text-xl font-black text-slate-900 mt-4">{selectedAdmin?.name}</Text>
-                  <Text className="text-slate-500 font-bold">{selectedAdmin?.phoneNumber}</Text>
-              </View>
-              <View className="p-8">
-                  <View className="mb-6">
+      <Modal visible={viewModalVisible} transparent animationType="fade" onRequestClose={() => setViewModalVisible(false)}>
+          <TouchableOpacity className="flex-1 justify-center items-center bg-black/80 px-4" activeOpacity={1} onPress={() => setViewModalVisible(false)}>
+            <TouchableOpacity activeOpacity={1} className="bg-white w-full rounded-[40px] overflow-hidden shadow-2xl">
+                <View className="flex-row min-h-[200px]">
+                {/* LEFT: Admin Badge */}
+                <View className="flex-1 justify-center items-center p-4 bg-slate-50/80">
+                  <View className="w-16 h-16 rounded-full bg-amber-100 justify-center items-center mb-3">
+                    <Ionicons name="shield-half" size={32} color="#f59e0b" />
+                  </View>
+                  <Text className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">ADMIN</Text>
+                  <Text className="text-sm font-black text-slate-900 text-center leading-tight">{selectedAdmin?.name}</Text>
+                  <Text className="text-[10px] font-bold text-slate-400 mt-1">{selectedAdmin?.phoneNumber}</Text>
+                </View>
+
+                {/* SEPARATOR */}
+                <View className="w-[1px] bg-slate-200 my-8" />
+
+                {/* RIGHT: Credentials */}
+                <View className="flex-[1.5] justify-center p-6">
+                  {/* Username */}
+                  <View className="mb-5">
                     <Text className="text-[9px] font-black text-slate-400 uppercase mb-2">{t('username')}</Text>
                     <View className="flex-row justify-between items-center">
                       <Text className="text-slate-900 font-bold text-sm">@{selectedAdmin?.username}</Text>
                       <TouchableOpacity onPress={() => handleCopy(selectedAdmin?.username, 'user')} className={`flex-row items-center px-2 py-1 rounded-lg ${copiedUser ? 'bg-green-100' : 'bg-slate-100'}`}>
-                        <Text className={`text-[9px] font-black mr-1 ${copiedUser ? 'text-green-600' : 'text-slate-400'}`}>{copiedUser ? t('copied') : t('copy')}</Text>
                         <Ionicons name={copiedUser ? "checkmark-circle" : "copy-outline"} size={14} color={copiedUser ? "#16a34a" : "#94a3b8"} />
+                        <Text className={`text-[9px] font-black ml-1 ${copiedUser ? 'text-green-600' : 'text-slate-400'}`}>{copiedUser ? t('copied') : t('copy')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
+
+                  {/* Password */}
                   <View>
                     <Text className="text-[9px] font-black text-slate-400 uppercase mb-2">{t('password')}</Text>
                     <View className="flex-row justify-between items-center">
-                      <Text className="text-slate-900 font-bold text-sm">{selectedAdmin?.password}</Text>
+                      <Text className="text-slate-900 font-bold text-sm" numberOfLines={1}>{selectedAdmin?.password}</Text>
                       <TouchableOpacity onPress={() => handleCopy(selectedAdmin?.password, 'pass')} className={`flex-row items-center px-2 py-1 rounded-lg ${copiedPass ? 'bg-green-100' : 'bg-slate-100'}`}>
-                        <Text className={`text-[9px] font-black mr-1 ${copiedPass ? 'text-green-600' : 'text-slate-400'}`}>{copiedPass ? t('copied') : t('copy')}</Text>
                         <Ionicons name={copiedPass ? "checkmark-circle" : "copy-outline"} size={14} color={copiedPass ? "#16a34a" : "#94a3b8"} />
+                        <Text className={`text-[9px] font-black ml-1 ${copiedPass ? 'text-green-600' : 'text-slate-400'}`}>{copiedPass ? t('copied') : t('copy')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
+                </View>
               </View>
+
+              {/* Close */}
               <TouchableOpacity onPress={() => setViewModalVisible(false)} className="bg-slate-900 h-14 justify-center items-center">
                 <Text className="text-white font-black text-xs uppercase tracking-widest">{t('close_console')}</Text>
               </TouchableOpacity>
-            </View>
-          </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
       </Modal>
 
       {/* --- FORM MODAL --- */}

@@ -1,5 +1,5 @@
-1- notification is not working, test again with user account
-2- when keyboard is open the screen is not flexible
-3- change the logo
-4- change the list to be small and have more data
-5- if possible give khaled's phone an exception to have two accounts one admin and one user.
+- add numbers beside the data for user and admin pages
+- might change the alphabetic order to depend on the brand then id.
+- add the feature where the phones are saved in the user's memory so even there is no internet he can still check the prices.
+
+

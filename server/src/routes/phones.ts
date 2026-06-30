@@ -292,11 +292,11 @@ router.get('/', async (req, res) => {
   try {
     const { brands, sortType, sortOrder, search, userId, favoritesOnly } = req.query;
     let AND_filters: any[] = [];
-
+ 
     if (favoritesOnly === 'true' && userId) {
       AND_filters.push({ favoritedBy: { some: { userId: Number(userId) } } });
     }
-
+ 
     if (search) {
       AND_filters.push({
         OR: [
@@ -305,33 +305,36 @@ router.get('/', async (req, res) => {
         ]
       });
     }
-
+ 
     if (brands && brands !== 'ALL' && brands !== '') {
       const brandIdArray = String(brands).split(',').map(Number).filter(id => !isNaN(id));
       if (brandIdArray.length > 0) {
         AND_filters.push({ brandId: { in: brandIdArray } });
       }
     }
-
-    const direction = sortOrder === 'desc' ? 'desc' : 'asc';
-    const type = sortType === 'DATE' ? 'lastUpdated' : 'id';
-
+ 
+    const direction: 'asc' | 'desc' = sortOrder === 'desc' ? 'desc' : 'asc';
+ 
+    const orderBy = sortType === 'DATE'
+      ? { lastUpdated: direction }
+      : [{ brand: { name: direction } }, { id: direction }];
+ 
     const phones = await prisma.phone.findMany({
       where: AND_filters.length > 0 ? { AND: AND_filters } : {},
       include: {
         brand: true,
         favoritedBy: userId ? { where: { userId: Number(userId) } } : false
       },
-      orderBy: { [type]: direction },
+      orderBy,
     });
-
+ 
     let results = phones.map(p => ({
       ...p,
       brand: p.brand ? p.brand.name : "UNKNOWN", 
       isFavorite: p.favoritedBy?.length > 0,
       favDate: p.favoritedBy?.[0]?.createdAt || null
     }));
-
+ 
     res.json(results);
   } catch (error) { 
     console.error("❌ GET /phones error:", error);
