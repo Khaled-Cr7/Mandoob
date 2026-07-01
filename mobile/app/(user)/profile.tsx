@@ -8,6 +8,7 @@ import { RefreshControl } from 'react-native';
 import { useSession } from '../../context/SessionContext';
 import { handleLanguageToggle } from '../../utils/language';
 import { Image } from 'expo-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileAvatar = ({ avatarUri, fallbackUri, cacheKey }: { 
   avatarUri: string | null, 
@@ -46,6 +47,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [cacheKey, setCacheKey] = useState(Date.now());
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const CACHE_PROFILE_KEY = `cache_profile_${userId}`;
 
   const { confirmSignOut } = useSession();
 
@@ -135,9 +137,19 @@ export default function ProfileScreen() {
       if (!isRefresh) setLoading(true);
       const response = await fetch(`${API_URL}/profile/${userId}`);
       const data = await response.json();
-      if (response.ok) setUser(data);
+      if (response.ok) {
+        setUser(data);
+        await AsyncStorage.setItem(CACHE_PROFILE_KEY, JSON.stringify(data));
+      } else {
+        throw new Error('Server error');
+      }
     } catch (error) {
-      console.error("❌ Network Error:", error);
+      const cached = await AsyncStorage.getItem(CACHE_PROFILE_KEY);
+      if (cached) {
+        setUser(JSON.parse(cached));
+      } else {
+        setUser(null); // no cache, no data
+      }
     } finally {
       if (!isRefresh) setLoading(false);
     }
@@ -190,7 +202,7 @@ export default function ProfileScreen() {
         Alert.alert("Error", "Could not update password");
       }
     } catch (error) {
-      Alert.alert("Error", "Server error");
+      Alert.alert(t('error'), t('connection_error'));
     }
   };
 
@@ -204,10 +216,28 @@ export default function ProfileScreen() {
   console.log('🔍 avatarUri:', avatarUri);
 
 
-  if ( loading ) return (
+  if (loading) return (
     <View className="flex-1 justify-center items-center bg-white">
       <ActivityIndicator size="large" color="#3b82f6" />
     </View>
+  );
+
+  if (!user) return (
+    <ScrollView
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      contentContainerStyle={{ flex: 1 }}
+      className="flex-1 bg-slate-50"
+    >
+      <View className="flex-1 justify-center items-center px-10">
+        <Ionicons name="cloud-offline-outline" size={60} color="#cbd5e1" />
+        <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+          {t('connection_error')}
+        </Text>
+        <Text className="text-slate-300 font-bold text-center mt-2 text-[10px]">
+          {t('pull_to_retry')}
+        </Text>
+      </View>
+    </ScrollView>
   );
 
 

@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface SystemLog {
   id: number;
@@ -26,15 +27,29 @@ export default function SystemChangesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { userId } = useLocalSearchParams();
+  const [connectionError, setConnectionError] = useState(false);
+  const CACHE_CHANGES_KEY = `cache_changes_${userId}`;
 
   const fetchChanges = async () => {
     if (!userId) return;
+    setConnectionError(false);
     try {
       const res = await fetch(`${API_URL}/phones/changes?userId=${userId}`);
-      const data = await res.json();
-      setChanges(data);
+      if (res.ok) {
+        const data = await res.json();
+        setChanges(data);
+        await AsyncStorage.setItem(CACHE_CHANGES_KEY, JSON.stringify(data));
+      } else {
+        throw new Error('Server error');
+      }
     } catch (e) {
-      console.error(e);
+      const cached = await AsyncStorage.getItem(CACHE_CHANGES_KEY);
+      if (cached) {
+        setChanges(JSON.parse(cached));
+      } else {
+        setChanges([]);
+        setConnectionError(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -97,13 +112,21 @@ export default function SystemChangesScreen() {
     switch (type) {
       case 'ADDED': return { bg: 'bg-emerald-50', text: 'text-emerald-600', icon: 'add-circle' as any };
       case 'PRICE_UPDATE': return { bg: 'bg-blue-50', text: 'text-blue-600', icon: 'pricetag' as any };
+      case 'DELETED': return { bg: 'bg-red-50', text: 'text-red-500', icon: 'trash' as any };
       default: return { bg: 'bg-slate-50', text: 'text-slate-600', icon: 'help' as any };
     }
   };
 
   // --- LOGIC SPLIT ---
-  const myDrafts = changes.filter(item => !item.isPublished && Number(item.userId) === Number(userId));
-  const masterRecord = changes.filter(item => item.isPublished || Number(item.userId) !== Number(userId));
+  // Pending tasks: only unpublished ADDED/PRICE_UPDATE from this user (excludes DELETED — those are never publishable)
+  const myDrafts = changes.filter(item => 
+    !item.isPublished && 
+    Number(item.userId) === Number(userId) && 
+    item.type !== 'DELETED'
+  );
+  // Master record: everything, all types, all statuses
+  const masterRecord = changes;
+
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -120,6 +143,22 @@ export default function SystemChangesScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
       >
+        {loading && !refreshing ? (
+          <View className="items-center py-20">
+            <ActivityIndicator size="large" color="#3b82f6" />
+          </View>
+        ) : connectionError ? (
+          <View className="items-center py-20 px-10">
+            <Ionicons name="cloud-offline-outline" size={60} color="#cbd5e1" />
+            <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+              {t('connection_error')}
+            </Text>
+            <Text className="text-slate-300 font-bold text-center mt-2 text-[10px]">
+              {t('pull_to_retry')}
+            </Text>
+          </View>
+        ) : (
+        <>
         {/* --- SECTION 1: MY ACTIVE DRAFTS --- */}
         <Text className="text-[10px] font-black text-blue-600 uppercase tracking-[2px] mb-4 ml-2">
           {t('my_pending_tasks')}
@@ -179,41 +218,52 @@ export default function SystemChangesScreen() {
               {t('master_audit_log_title')}
             </Text>
 
-            {masterRecord.map((item) => (
-              <View key={item.id} className="mb-3 p-4 bg-slate-200/40 rounded-[24px] border border-slate-200">
-                <View className="flex-row justify-between items-center mb-2">
-                  <View className="flex-row items-center">
-                    <Ionicons name="person-circle" size={14} color="#64748b" />
-                    <Text className="text-[9px] font-black text-slate-500 uppercase ml-1.5">
-                      {t('editor')}: <Text className="text-slate-800">{item.user?.name || "System"}</Text>
-                    </Text>
+            {masterRecord.map((item) => {
+              const style = getTypeStyles(item.type);
+              return (
+                <View key={item.id} className={`mb-3 p-4 rounded-[24px] border ${item.isPublished ? 'bg-slate-200/40 border-slate-200' : 'bg-amber-50/60 border-amber-100'}`}>
+                  <View className="flex-row justify-between items-center mb-2">
+                    <View className="flex-row items-center gap-x-2">
+                      <View className={`${style.bg} px-2 py-0.5 rounded-full flex-row items-center`}>
+                        <Ionicons name={style.icon} size={10} color={style.text.includes('emerald') ? '#059669' : style.text.includes('blue') ? '#2563eb' : style.text.includes('red') ? '#ef4444' : '#64748b'} />
+                        <Text className={`ml-1 text-[8px] font-black uppercase ${style.text}`}>{item.type}</Text>
+                      </View>
+                      <View className="flex-row items-center">
+                        <Ionicons name="person-circle" size={12} color="#94a3b8" />
+                        <Text className="text-[9px] font-black text-slate-500 ml-1">
+                          {item.user?.name || "System"}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className={`px-2 py-0.5 rounded-md ${item.isPublished ? 'bg-emerald-100' : item.type === 'DELETED' ? 'bg-slate-100' : 'bg-amber-100'}`}>
+                      <Text className={`text-[7px] font-black ${item.isPublished ? 'text-emerald-600' : item.type === 'DELETED' ? 'text-slate-500' : 'text-amber-600'}`}>
+                        {item.isPublished ? t('published_status') : item.type === 'DELETED' ? t('recorded') : t('pending_status')}
+                      </Text>
+                    </View>
                   </View>
-                  <View className={`px-2 py-0.5 rounded-md ${item.isPublished ? 'bg-emerald-100' : 'bg-amber-100'}`}>
-                    <Text className={`text-[7px] font-black ${item.isPublished ? 'text-emerald-600' : 'text-amber-600'}`}>
-                      {item.isPublished ? t('published_status') : t('pending_status')}
+                  
+                  <Text className="text-sm font-black text-slate-700">{item.modelName}</Text>
+                  
+                  <View className="mt-1">
+                    {item.type === 'PRICE_UPDATE' ? (
+                      <Text className="text-[10px] text-slate-500">
+                        {t('price_shift_label')}: <Text className="text-red-500 font-bold">{item.oldValue}</Text> {t('to')} <Text className="text-emerald-600 font-bold">{item.newValue}</Text> {t('currency')}
+                      </Text>
+                    ) : item.type === 'DELETED' ? (
+                      <Text className="text-[10px] text-red-400 italic">{t('device_remove_msg')}</Text>
+                    ) : (
+                      <Text className="text-[10px] text-slate-500 italic">{t('full_enroll_msg')}</Text>
+                    )}
+                    <Text className="text-[8px] text-slate-400 font-bold uppercase mt-1">
+                      {new Date(item.createdAt).toLocaleString()}
                     </Text>
                   </View>
                 </View>
-                
-                <Text className="text-sm font-black text-slate-700">{item.modelName}</Text>
-                
-                <View className="mt-1">
-                  {item.type === 'PRICE_UPDATE' ? (
-                    <Text className="text-[10px] text-slate-500">
-                      {t('price_shift_label')}: <Text className="text-red-500 font-bold">{item.oldValue}</Text> {t('to')} <Text className="text-emerald-600 font-bold">{item.newValue}</Text> {t('currency')}
-                    </Text>
-                  ) : (
-                    <Text className="text-[10px] text-slate-500 italic">
-                      {item.type === 'ADDED' ? t('full_enroll_msg') : t('device_remove_msg')}
-                    </Text>
-                  )}
-                  <Text className="text-[8px] text-slate-400 font-bold uppercase mt-1">
-                    {new Date(item.createdAt).toLocaleString()}
-                  </Text>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </>
+         )}
+        </>
         )}
       </ScrollView>
     </View>

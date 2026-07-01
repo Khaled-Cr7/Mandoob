@@ -25,6 +25,8 @@ export default function DeviceSecureManagement() {
   const [activeTab, setActiveTab] = useState<DeviceStatus>('PENDING');
   const [now, setNow] = useState(new Date());
   const { confirmSignOut } = useSession();
+  const [connectionError, setConnectionError] = useState(false);
+  const CACHE_DEVICES_KEY = `cache_devices_${activeTab}`;
 
   const toggleLanguage = () => {
     handleLanguageToggle(i18n, t, userId);
@@ -56,13 +58,22 @@ export default function DeviceSecureManagement() {
 
   // --- 3. DATA FETCHING ---
   const fetchDevices = async () => {
+    setConnectionError(false);
+    const cacheKey = `cache_devices_${activeTab}`;
     try {
       const response = await fetch(`${API_URL}/security/devices?status=${activeTab}`);
       if (!response.ok) throw new Error();
       const data = await response.json();
       setDevices(data);
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
     } catch (e) {
-      Alert.alert(t('connection_error'), t('db_reach_error'));
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) {
+        setDevices(JSON.parse(cached));
+      } else {
+        setDevices([]);
+        setConnectionError(true);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -119,9 +130,14 @@ export default function DeviceSecureManagement() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ status: newStatus })
             });
-            if (res.ok) fetchDevices();
+            if (res.ok) {
+              fetchDevices();
+            } else {
+              Alert.alert(t('error'), t('action_failed'));
+              setLoading(false);
+            }
           } catch (e) {
-            Alert.alert(t('error'), t('action_failed'));
+            Alert.alert(t('error'), t('connection_error'));
             setLoading(false);
           }
         }
@@ -212,14 +228,27 @@ export default function DeviceSecureManagement() {
           contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
           ListEmptyComponent={
             loading ? (
-                <ActivityIndicator size="large" color="#fbbf24" className="mt-20" />
+              <View className="items-center mt-20">
+                <ActivityIndicator size="large" color="#fbbf24" />
+                <Text className="text-slate-400 font-black mt-4 uppercase text-[10px]">{t('accessing_db')}</Text>
+              </View>
+            ) : connectionError ? (
+              <View className="items-center mt-20 px-10">
+                <Ionicons name="cloud-offline-outline" size={50} color="#cbd5e1" />
+                <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+                  {t('connection_error')}
+                </Text>
+                <Text className="text-slate-300 font-bold text-center mt-2 text-[10px]">
+                  {t('pull_to_retry')}
+                </Text>
+              </View>
             ) : (
-                <View className="items-center mt-20 px-10">
-                    <Ionicons name="shield-outline" size={50} color="#cbd5e1" />
-                    <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
-                        {t('no_devices_found')}
-                    </Text>
-                </View>
+              <View className="items-center mt-20 px-10">
+                <Ionicons name="shield-outline" size={50} color="#cbd5e1" />
+                <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+                  {t('no_devices_found')}
+                </Text>
+              </View>
             )
           }
           renderItem={({ item: userGroup }) => (

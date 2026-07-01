@@ -5,6 +5,7 @@ import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSession } from '../../context/SessionContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function NotificationListScreen() {
   const { t } = useTranslation();
@@ -14,6 +15,8 @@ export default function NotificationListScreen() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [connectionError, setConnectionError] = useState(false);
+  const CACHE_NOTIF_KEY = `cache_notifications_${userId}`;
 
 
   const renderNotificationMessage = (item: any) => {
@@ -45,17 +48,28 @@ export default function NotificationListScreen() {
   // 1. Updated fetchNotifications
   const fetchNotifications = async () => {
     if (!userId) return;
-    
-    // Only show the big loading spinner if we don't have any notifications yet
+    setConnectionError(false);
+
     if (notifications.length === 0) setLoading(true);
     
     try {
       const res = await fetch(`${API_URL}/notifications/${userId}`);
-      const data = await res.json();
-      setNotifications(data);
-      markAllAsRead();
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+        await AsyncStorage.setItem(CACHE_NOTIF_KEY, JSON.stringify(data));
+        markAllAsRead();
+      } else {
+        throw new Error('Server error');
+      }
     } catch (e) {
-      console.error("Fetch error:", e);
+      const cached = await AsyncStorage.getItem(CACHE_NOTIF_KEY);
+      if (cached) {
+        setNotifications(JSON.parse(cached));
+      } else {
+        setNotifications([]);
+        setConnectionError(true);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -115,6 +129,16 @@ export default function NotificationListScreen() {
           loading ? (
             <View className="py-20 justify-center items-center">
               <ActivityIndicator size="large" color="#3b82f6" />
+            </View>
+          ) : connectionError ? (
+            <View className="items-center mt-20 px-10">
+              <Ionicons name="cloud-offline-outline" size={60} color="#cbd5e1" />
+              <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+                {t('connection_error')}
+              </Text>
+              <Text className="text-slate-300 font-bold text-center mt-2 text-[10px]">
+                {t('pull_to_retry')}
+              </Text>
             </View>
           ) : (
             <View className="items-center mt-20 px-10">
