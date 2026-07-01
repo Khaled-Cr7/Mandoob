@@ -79,10 +79,11 @@ router.get('/changes', async (req, res) => {
   try {
     const changes = await prisma.systemChange.findMany({
       where: isAdminOne 
-        ? {} // 👈 User 1 sees EVERYTHING
+        ? {} // Super admins see EVERYTHING including dismissed
         : { 
             userId: Number(userId),
-            isPublished: false 
+            isPublished: false,
+            isDismissed: false  // Regular admins only see non-dismissed pending tasks
           },
       include: {
         user: { // 👈 Include user info so we know WHO made the change
@@ -120,6 +121,30 @@ router.delete('/changes/:id', async (req, res) => {
     res.status(500).json({ message: "Error deleting log" });
   }
 });
+
+
+// POST /api/phones/changes/:id/dismiss
+router.post('/changes/:id/dismiss', async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+
+  try {
+    const log = await prisma.systemChange.findUnique({ where: { id: Number(id) } });
+
+    if (!log) return res.status(404).json({ message: "Log not found" });
+    if (log.userId !== Number(userId)) return res.status(403).json({ message: "Unauthorized" });
+
+    await prisma.systemChange.update({
+      where: { id: Number(id) },
+      data: { isDismissed: true }
+    });
+
+    res.json({ message: "Dismissed" });
+  } catch (error) {
+    res.status(500).json({ message: "Error dismissing log" });
+  }
+});
+
 
 
 // POST /api/phones/changes/:id/publish
@@ -162,9 +187,6 @@ router.post('/changes/:id/publish', async (req, res) => {
 
 
 
-
-
-
 // --- PHONE ROUTES ---
 
 // DELETE PHONE
@@ -189,6 +211,7 @@ router.delete('/:id', async (req, res) => {
           modelName: phoneToDelete.name,
           userId: Number(userId),
           isPublished: false,
+          isDismissed: true,
         }
       });
     }

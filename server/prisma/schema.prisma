@@ -132,14 +132,14 @@ model Favorite {
 model SystemChange {
   id          Int        @id @default(autoincrement())
   type        ChangeType
-  modelName   String     // e.g., "iPhone 15 Pro"
-  oldValue    String?    // Used for Price (e.g., "5000")
-  newValue    String?    // Used for Price (e.g., "4800")
+  modelName   String
+  oldValue    String?
+  newValue    String?
   isPublished Boolean    @default(false)
+  isDismissed Boolean    @default(false)
 
   userId      Int
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
 
   createdAt   DateTime   @default(now())
 }

@@ -14,6 +14,7 @@ interface SystemLog {
   oldValue?: string;
   newValue?: string;
   isPublished: boolean;
+  isDismissed: boolean;
   userId: number;
   createdAt: string;
   user?: {
@@ -74,7 +75,7 @@ export default function SystemChangesScreen() {
     }
   };
 
-  const handleDeleteLog = (logId: number) => {
+  const handleDismissLog = (logId: number) => {
     Alert.alert(t('system_delete'), t('delete_log_confirm'), [
       { text: t('cancel'), style: 'cancel' },
       {
@@ -82,8 +83,10 @@ export default function SystemChangesScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            const res = await fetch(`${API_URL}/phones/changes/${logId}?userId=${userId}`, {
-              method: 'DELETE',
+            const res = await fetch(`${API_URL}/phones/changes/${logId}/dismiss`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: Number(userId) })
             });
             if (res.ok) fetchChanges();
             else Alert.alert(t('error'), t('action_failed'));
@@ -118,13 +121,14 @@ export default function SystemChangesScreen() {
   };
 
   // --- LOGIC SPLIT ---
-  // Pending tasks: only unpublished ADDED/PRICE_UPDATE from this user (excludes DELETED — those are never publishable)
+  // Pending tasks: unpublished, non-dismissed, ADDED/PRICE_UPDATE from this user only
   const myDrafts = changes.filter(item => 
     !item.isPublished && 
+    !item.isDismissed &&
     Number(item.userId) === Number(userId) && 
     item.type !== 'DELETED'
   );
-  // Master record: everything, all types, all statuses
+  // Master record: everything
   const masterRecord = changes;
 
 
@@ -197,7 +201,7 @@ export default function SystemChangesScreen() {
                     <Ionicons name="megaphone-outline" size={16} color="white" />
                     <Text className="text-white font-black text-[10px] uppercase ml-2">{t('send_notification')}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDeleteLog(item.id)} className="w-12 h-12 bg-red-50 rounded-2xl justify-center items-center border border-red-100">
+                   <TouchableOpacity onPress={() => handleDismissLog(item.id)} className="w-12 h-12 bg-red-50 rounded-2xl justify-center items-center border border-red-100">
                     <Ionicons name="trash" size={18} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
@@ -235,9 +239,9 @@ export default function SystemChangesScreen() {
                         </Text>
                       </View>
                     </View>
-                    <View className={`px-2 py-0.5 rounded-md ${item.isPublished ? 'bg-emerald-100' : item.type === 'DELETED' ? 'bg-slate-100' : 'bg-amber-100'}`}>
-                      <Text className={`text-[7px] font-black ${item.isPublished ? 'text-emerald-600' : item.type === 'DELETED' ? 'text-slate-500' : 'text-amber-600'}`}>
-                        {item.isPublished ? t('published_status') : item.type === 'DELETED' ? t('recorded') : t('pending_status')}
+                    <View className={`px-2 py-0.5 rounded-md ${item.isPublished ? 'bg-emerald-100' : item.isDismissed ? 'bg-slate-100' : 'bg-amber-100'}`}>
+                      <Text className={`text-[7px] font-black ${item.isPublished ? 'text-emerald-600' : item.isDismissed ? 'text-slate-500' : 'text-amber-600'}`}>
+                        {item.isPublished ? t('published_status') : item.isDismissed ? t('recorded') : t('pending_status')}
                       </Text>
                     </View>
                   </View>
