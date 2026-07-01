@@ -225,7 +225,7 @@ export default function SystemChangesScreen() {
             {masterRecord.map((item) => {
               const style = getTypeStyles(item.type);
               return (
-                <View key={item.id} className={`mb-3 p-4 rounded-[24px] border ${item.isPublished ? 'bg-slate-200/40 border-slate-200' : 'bg-amber-50/60 border-amber-100'}`}>
+                <View key={item.id} className={`mb-3 p-4 rounded-[24px] border ${!item.isPublished && !item.isDismissed ? 'bg-amber-50/60 border-amber-100' : 'bg-slate-200/40 border-slate-200'}`}>
                   <View className="flex-row justify-between items-center mb-2">
                     <View className="flex-row items-center gap-x-2">
                       <View className={`${style.bg} px-2 py-0.5 rounded-full flex-row items-center`}>
