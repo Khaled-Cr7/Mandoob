@@ -1,5 +1,8 @@
-- add numbers beside the data for user and admin pages
-- might change the alphabetic order to depend on the brand then id.
 - add the feature where the phones are saved in the user's memory so even there is no internet he can still check the prices.
-
-
+- the brand fetch need to have the cache thing also.
+- if there is no internet and no cached data in all pages instead of showing no users just show a loading screen just show no data if there is actually no data.
+- handles connection error problems when the admin tries to edit or delete some data.
+- fix favorite problem and handle the favorite connection error.
+- fix the search function so it works with the cached data if there is no internet
+- record all system changes even phone deletion and put published, pending, or deleted but for the deleted data just show deleted right away.
+- think about adding notification editor where the admins can delete some notifications from users.

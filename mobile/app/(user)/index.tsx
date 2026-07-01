@@ -91,17 +91,24 @@ export default function UserInventoryScreen() {
   const fetchPhones = async () => {
     setLoading(true);
     try {
-      // If selectedBrands is empty, we send 'ALL'
+      // 1. Load cache first and show immediately
+      const cacheKey = activeTab === 'FAVORITES' ? 'phones_cache_user_favorites' : 'phones_cache_user';
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) setPhones(JSON.parse(cached));
+
       const brandQuery = selectedBrands.length === 0 ? 'ALL' : selectedBrands.join(',');
       const favQuery = activeTab === 'FAVORITES' ? '&favoritesOnly=true' : '';
-      
       const url = `${API_URL}/phones?brands=${brandQuery}&sortType=${sortType}&sortOrder=${sortOrder}&search=${search}&userId=${userId}${favQuery}`;
       
       const response = await fetch(url);
       const data = await response.json();
+
+      // 2. Update display and save fresh data to cache
       setPhones(data);
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
     } catch (error) {
-      console.error("Fetch error:", error);
+      // 3. Fetch failed (no internet) — cache already showing, do nothing
+      console.log('User: fetch failed, showing cached data');
     } finally {
       setLoading(false);
     }
