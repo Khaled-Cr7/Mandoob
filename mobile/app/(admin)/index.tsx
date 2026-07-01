@@ -81,15 +81,22 @@ export default function AdminPhoneManagement() {
   const fetchPhones = async () => {
     setLoading(true);
     try {
+      // 1. Load cache first and show immediately
+      const cached = await AsyncStorage.getItem('phones_cache_admin');
+      if (cached) setPhones(JSON.parse(cached));
+
       const brandQuery = selectedBrands.length === 0 ? 'ALL' : selectedBrands.join(',');
-      // Pass both sort parameters to the backend
       const url = `${API_URL}/phones?brands=${brandQuery}&sortType=${sortType}&sortOrder=${sortOrder}&search=${search}`;
       
       const response = await fetch(url);
       const data = await response.json();
+
+      // 2. Update display and save fresh data to cache
       setPhones(data);
+      await AsyncStorage.setItem('phones_cache_admin', JSON.stringify(data));
     } catch (error) {
-      console.error(error);
+      // 3. Fetch failed (no internet) — cache already showing, do nothing
+      console.log('Admin: fetch failed, showing cached data');
     } finally {
       setLoading(false);
     }

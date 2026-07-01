@@ -336,12 +336,14 @@ export default function PersonnelManagement() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
           }
-          renderItem={({ item }: any) => (
-            <TouchableOpacity 
-              onPress={() => { setSelectedUser(item); setViewModalVisible(true); }}
-              activeOpacity={0.7}
-              className="mx-6 mb-3 p-4 bg-white rounded-[28px] border border-slate-100 shadow-sm flex-row justify-between items-center"
-            >
+          renderItem={({ item, index }: any) => (
+            <View className="ml-3 mr-6 mb-3 flex-row items-center">
+              <Text className="text-[10px] font-black text-slate-400 w-5 text-right mr-2">{index + 1}</Text>
+              <TouchableOpacity 
+                onPress={() => { setSelectedUser(item); setViewModalVisible(true); }}
+                activeOpacity={0.7}
+                className="flex-1 p-4 bg-white rounded-[28px] border border-slate-100 shadow-sm flex-row justify-between items-center"
+              >
               <View className="flex-row items-center flex-1 mr-4">
                 <View className="border-2 border-slate-100 rounded-full p-0.5">
                   {/* Use the new component here */}
@@ -365,6 +367,7 @@ export default function PersonnelManagement() {
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
+            </View>
           )}
           ListEmptyComponent={
             loading ? (

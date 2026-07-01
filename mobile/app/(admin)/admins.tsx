@@ -259,11 +259,13 @@ export default function AdminManagement() {
           data={admins}
           contentContainerStyle={{ paddingBottom: 100 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#fbbf24']} />}
-          renderItem={({ item }: any) => (
-            <TouchableOpacity 
-              onPress={() => { setSelectedAdmin(item); setViewModalVisible(true); }}
-              className="mx-6 mb-3 p-5 bg-white rounded-[28px] border border-slate-100 flex-row justify-between items-center"
-            >
+          renderItem={({ item, index }: any) => (
+            <View className="ml-3 mr-6 mb-3 flex-row items-center">
+              <Text className="text-[10px] font-black text-slate-400 w-5 text-right mr-2">{index + 1}</Text>
+              <TouchableOpacity 
+                onPress={() => { setSelectedAdmin(item); setViewModalVisible(true); }}
+                className="flex-1 p-5 bg-white rounded-[28px] border border-slate-100 flex-row justify-between items-center"
+              >
               <View className="flex-1">
                 <Text className="text-lg font-black text-slate-900 leading-5">{item.name}</Text>
                 <Text className="text-[10px] text-slate-400 font-bold uppercase mt-1">@{item.username}</Text>
@@ -285,6 +287,7 @@ export default function AdminManagement() {
                 }} className="p-2.5 bg-red-50 rounded-xl border border-red-100"><Ionicons name="trash" size={14} color="#ef4444" /></TouchableOpacity>
               </View>
             </TouchableOpacity>
+            </View>
           )}
           ListEmptyComponent={
             loading ? (
