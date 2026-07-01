@@ -35,6 +35,8 @@ export default function AdminManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const { confirmSignOut } = useSession();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [connectionError, setConnectionError] = useState(false);
+  const CACHE_ADMINS_KEY = 'cache_admins_list';
 
   const toggleLanguage = () => {
     handleLanguageToggle(i18n, t, userId);
@@ -58,14 +60,26 @@ export default function AdminManagement() {
 }, []);
 
   // --- FETCH LOGIC ---
-  const fetchAdmins = async () => {
-    setLoading(true);
+  const fetchAdmins = async (forceRefresh = false) => {
+    if (!forceRefresh) setLoading(true);
+    setConnectionError(false);
     try {
       const response = await fetch(`${API_URL}/admin/users?search=${search}&role=ADMIN`);
-      const data = await response.json();
-      setAdmins(data);
+      if (response.ok) {
+        const data = await response.json();
+        setAdmins(data);
+        await AsyncStorage.setItem(CACHE_ADMINS_KEY, JSON.stringify(data));
+      } else {
+        throw new Error('Server error');
+      }
     } catch (e) {
-      console.error(e);
+      const cached = await AsyncStorage.getItem(CACHE_ADMINS_KEY);
+      if (cached) {
+        setAdmins(JSON.parse(cached));
+      } else {
+        setAdmins([]);
+        setConnectionError(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -159,14 +173,14 @@ export default function AdminManagement() {
 
       if (res.ok) {
           setIsModalVisible(false);
-          fetchAdmins();
+          fetchAdmins(true);
           // Optional: Alert.alert(t('success'), t('admin_saved'));
       } else {
           const serverMessage = result.message || t('action_failed');
           Alert.alert(t('system_error'), serverMessage);
       }
     } catch (e) {
-      Alert.alert(t('connection_error'), t('db_reach_error'));
+      Alert.alert(t('error'), t('connection_error'));
     }
   };
 
@@ -270,41 +284,67 @@ export default function AdminManagement() {
                 <Text className="text-lg font-black text-slate-900 leading-5">{item.name}</Text>
                 <Text className="text-[10px] text-slate-400 font-bold uppercase mt-1">@{item.username}</Text>
               </View>
-              <View className="flex-row space-x-1">
+               <View className="flex-row space-x-1">
                 <TouchableOpacity onPress={() => {
-                   setIsEditing(true); setCurrentId(item.id);
-                   setFormData({ name: item.name, username: item.username, password: '', phoneNumber: item.phoneNumber });
-                   setIsModalVisible(true);
-                }} className="p-2.5 bg-slate-900 rounded-xl"><Ionicons name="pencil" size={14} color="#fbbf24" /></TouchableOpacity>
+                  setIsEditing(true);
+                  setCurrentId(item.id);
+                  setFormData({ name: item.name, username: item.username, password: '', phoneNumber: item.phoneNumber });
+                  setIsModalVisible(true);
+                }} className="p-2.5 bg-slate-900 rounded-xl">
+                  <Ionicons name="pencil" size={14} color="#fbbf24" />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => {
                    Alert.alert(t('revoke_access'), `${t('confirm_user_delete')} ${item.name}?`, [
                      { text: t('cancel') },
                      { text: t('delete'), style: "destructive", onPress: async () => {
-                         await fetch(`${API_URL}/admin/users/${item.id}`, { method: 'DELETE' });
-                         fetchAdmins();
+                         try {
+                           const res = await fetch(`${API_URL}/admin/users/${item.id}`, { method: 'DELETE' });
+                           if (res.ok) {
+                             fetchAdmins(true);
+                           } else {
+                             Alert.alert(t('error'), t('action_failed'));
+                           }
+                         } catch (e) {
+                           Alert.alert(t('error'), t('connection_error'));
+                         }
                      }}
                    ]);
-                }} className="p-2.5 bg-red-50 rounded-xl border border-red-100"><Ionicons name="trash" size={14} color="#ef4444" /></TouchableOpacity>
+                }} className="p-2.5 bg-red-50 rounded-xl border border-red-100">
+                  <Ionicons name="trash" size={14} color="#ef4444" />
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
             </View>
           )}
-          ListEmptyComponent={
+           ListEmptyComponent={
             loading ? (
-                <ActivityIndicator size="large" color="#0f172a" className="mt-20" />
+              <View className="items-center mt-20">
+                <ActivityIndicator size="large" color="#0f172a" />
+                <Text className="text-slate-400 font-black mt-4 uppercase text-[10px]">{t('accessing_db')}</Text>
+              </View>
+            ) : connectionError ? (
+              <View className="items-center mt-20 px-10">
+                <Ionicons name="cloud-offline-outline" size={40} color="#cbd5e1" />
+                <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+                  {t('connection_error')}
+                </Text>
+                <Text className="text-slate-300 font-bold text-center mt-2 text-[10px]">
+                  {t('pull_to_retry')}
+                </Text>
+              </View>
             ) : (
-                <View className="items-center mt-20 px-10">
+              <View className="items-center mt-20 px-10">
                 <Ionicons 
-                    name={search.length > 0 ? "search-outline" : "shield-outline"} 
-                    size={40} 
-                    color="#cbd5e1" 
+                  name={search.length > 0 ? "search-outline" : "shield-outline"} 
+                  size={40} 
+                  color="#cbd5e1" 
                 />
                 <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
-                    {search.length > 0 
-                    ? `${t('no_admin_matching')} "${search}"` 
-                    : t('no_admins_enrolled') || "No Admins in Database"}
+                  {search.length > 0 
+                  ? `${t('no_admin_matching')} "${search}"` 
+                  : t('no_admins_enrolled') || "No Admins in Database"}
                 </Text>
-                </View>
+              </View>
             )
           }
         />

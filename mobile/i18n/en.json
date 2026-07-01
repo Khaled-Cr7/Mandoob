@@ -204,5 +204,7 @@
   "added_msg": "Item has been added successfully.",
   "updated_msg": "Item has been updated successfully.",
   "fill_all_fields": "Please fill in all required fields.",
-  "admins": "Admins"
+  "admins": "Admins",
+  "pull_to_retry": "Pull down to retry",
+  "recorded": "RECORDED"
 }

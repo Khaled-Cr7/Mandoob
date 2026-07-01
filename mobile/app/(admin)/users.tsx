@@ -16,6 +16,7 @@ import { useSession } from '../../context/SessionContext';
 const UserAvatar = ({ item, baseUrl }: { item: any, baseUrl: string }) => {
   const [loading, setLoading] = useState(false); // Default to false
   const [error, setError] = useState(false);
+  
 
   // Re-calculate the URI logic
   const initialUri = item?.avatar?.includes('/uploads/')
@@ -87,6 +88,8 @@ export default function PersonnelManagement() {
   const [refreshing, setRefreshing] = useState(false);
   const { confirmSignOut } = useSession();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [connectionError, setConnectionError] = useState(false);
+  const CACHE_USERS_KEY = 'cache_users_list';
 
 
   const toggleLanguage = () => {
@@ -177,13 +180,29 @@ export default function PersonnelManagement() {
     return true;
   };
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  const fetchUsers = async (forceRefresh = false) => {
+    if (!forceRefresh) setLoading(true);
+    setConnectionError(false);
     try {
-      const response = await fetch(`${API_URL}/admin/users?search=${search}`);
-      const data = await response.json();
-      setUsers(data);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+      const res = await fetch(`${API_URL}/admin/users?search=${search}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data);
+        await AsyncStorage.setItem(CACHE_USERS_KEY, JSON.stringify(data));
+      } else {
+        throw new Error('Server error');
+      }
+    } catch (e) {
+      const cached = await AsyncStorage.getItem(CACHE_USERS_KEY);
+      if (cached) {
+        setUsers(JSON.parse(cached));
+      } else {
+        setUsers([]);
+        setConnectionError(true);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchUsers(); }, [search]);
@@ -234,13 +253,13 @@ export default function PersonnelManagement() {
       
       if (res.ok) {
         setIsModalVisible(false);
-        fetchUsers();
+        fetchUsers(true);
       } else {
         const errorData = await res.json();
         Alert.alert(t('system_error'), errorData.message || t('action_failed'));
       }
     } catch (e) { 
-      Alert.alert(t('connection_error'), t('db_reach_error'));
+      Alert.alert(t('error'), t('connection_error'));
     }
   };
 
@@ -248,8 +267,16 @@ export default function PersonnelManagement() {
     Alert.alert(t('revoke_access'), `${t('confirm_user_delete')} ${name}?`, [
       { text: t('cancel') },
       { text: t('delete'), style: "destructive", onPress: async () => {
-          await fetch(`${API_URL}/admin/users/${id}`, { method: 'DELETE' });
-          fetchUsers();
+          try {
+            const res = await fetch(`${API_URL}/admin/users/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+              fetchUsers(true);
+            } else {
+              Alert.alert(t('error'), t('action_failed'));
+            }
+          } catch (e) {
+            Alert.alert(t('error'), t('connection_error'));
+          }
       }}
     ]);
   };
@@ -375,12 +402,22 @@ export default function PersonnelManagement() {
                 <ActivityIndicator size="large" color="#0f172a" />
                 <Text className="text-slate-400 font-black mt-4 uppercase text-[10px]">{t('accessing_db')}</Text>
               </View>
+            ) : connectionError ? (
+              <View className="items-center mt-20 px-10">
+                <Ionicons name="cloud-offline-outline" size={40} color="#cbd5e1" />
+                <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+                  {t('connection_error')}
+                </Text>
+                <Text className="text-slate-300 font-bold text-center mt-2 text-[10px]">
+                  {t('pull_to_retry')}
+                </Text>
+              </View>
             ) : (
               <View className="items-center mt-20 px-10">
                 <Ionicons 
-                name= {search.length > 0 ? "search-outline" :"person-remove-outline"}
-                size={40} 
-                color="#cbd5e1" />
+                  name={search.length > 0 ? "search-outline" : "person-remove-outline"}
+                  size={40} 
+                  color="#cbd5e1" />
                 <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
                   {search.length > 0
                   ? `${t('no_personnel_matching')} "${search}"`

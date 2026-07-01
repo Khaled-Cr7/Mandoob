@@ -23,6 +23,11 @@ export default function UserInventoryScreen() {
   const [sortType, setSortType] = useState<'ID' | 'DATE'>('ID');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedPhone, setSelectedPhone] = useState<any>(null);
+  const [connectionError, setConnectionError] = useState(false);
+
+  const CACHE_PHONES_KEY = `cache_user_phones_${userId}`;
+  const CACHE_FAVORITES_KEY = `cache_user_favorites_${userId}`;
+  const CACHE_BRANDS_KEY = "cache_available_brands";
 
   const checkNotifications = async () => {
     if (!userId) return;
@@ -48,15 +53,27 @@ export default function UserInventoryScreen() {
 
 
   useEffect(() => {
+    const loadCachedBrands = async () => {
+      try {
+        const cached = await AsyncStorage.getItem(CACHE_BRANDS_KEY);
+        if (cached) setAvailableBrands(JSON.parse(cached));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
     const fetchBrands = async () => {
       try {
-        console.log("📡 Fetching brands from:", `${API_URL}/phones/brands`);
         const response = await fetch(`${API_URL}/phones/brands`);
-        if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-        const data = await response.json();
-        setAvailableBrands(data);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableBrands(data);
+          await AsyncStorage.setItem(CACHE_BRANDS_KEY, JSON.stringify(data));
+        } else {
+          await loadCachedBrands();
+        }
       } catch (error) {
-        console.error("❌ Brand fetch failed:", error);
+        await loadCachedBrands();
       }
     };
     fetchBrands();
@@ -69,8 +86,14 @@ export default function UserInventoryScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: Number(userId), phoneId })
       });
-      if (res.ok) fetchPhones(); // Refresh list to update hearts
-    } catch (e) { console.error(e); }
+      if (res.ok) {
+        fetchPhones(true);
+      } else {
+        alert(t('connection_error'));
+      }
+    } catch (e) {
+      alert(t('connection_error'));
+    }
   };
 
 
@@ -88,27 +111,33 @@ export default function UserInventoryScreen() {
     }
   };
 
-  const fetchPhones = async () => {
-    setLoading(true);
+  const fetchPhones = async (forceRefresh = false) => {
+    if (!forceRefresh) setLoading(true);
+    setConnectionError(false);
+
+    const brandQuery = selectedBrands.length === 0 ? 'ALL' : selectedBrands.join(',');
+    const favQuery = activeTab === 'FAVORITES' ? '&favoritesOnly=true' : '';
+    const url = `${API_URL}/phones?brands=${brandQuery}&sortType=${sortType}&sortOrder=${sortOrder}&search=${search}&userId=${userId}${favQuery}`;
+
+    const cacheKey = activeTab === 'FAVORITES' ? CACHE_FAVORITES_KEY : CACHE_PHONES_KEY;
+
     try {
-      // 1. Load cache first and show immediately
-      const cacheKey = activeTab === 'FAVORITES' ? 'phones_cache_user_favorites' : 'phones_cache_user';
-      const cached = await AsyncStorage.getItem(cacheKey);
-      if (cached) setPhones(JSON.parse(cached));
-
-      const brandQuery = selectedBrands.length === 0 ? 'ALL' : selectedBrands.join(',');
-      const favQuery = activeTab === 'FAVORITES' ? '&favoritesOnly=true' : '';
-      const url = `${API_URL}/phones?brands=${brandQuery}&sortType=${sortType}&sortOrder=${sortOrder}&search=${search}&userId=${userId}${favQuery}`;
-      
       const response = await fetch(url);
-      const data = await response.json();
-
-      // 2. Update display and save fresh data to cache
-      setPhones(data);
-      await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
+      if (response.ok) {
+        const data = await response.json();
+        setPhones(data);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
+      } else {
+        throw new Error("Server downstream communication error.");
+      }
     } catch (error) {
-      // 3. Fetch failed (no internet) — cache already showing, do nothing
-      console.log('User: fetch failed, showing cached data');
+      const cachedData = await AsyncStorage.getItem(cacheKey);
+      if (cachedData) {
+        setPhones(JSON.parse(cachedData));
+      } else {
+        setPhones([]);
+        if (!forceRefresh) setConnectionError(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -118,9 +147,8 @@ export default function UserInventoryScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setSearch('');
-    await fetchPhones(); 
     setRefreshing(false);
-  }, [fetchPhones]);
+  }, []);
 
 
   useEffect(() => {
@@ -253,7 +281,17 @@ export default function UserInventoryScreen() {
           loading ? (
             <View className="py-20 items-center justify-center">
               <ActivityIndicator size="large" color="#2563eb" />
-              <Text className="text-slate-400 font-black mt-4 uppercase text-[10px]">Accessing Stock...</Text>
+              <Text className="text-slate-400 font-black mt-4 uppercase text-[10px]">{t('accessing_db')}</Text>
+            </View>
+          ) : connectionError ? (
+            <View className="flex-1 py-20 items-center justify-center px-10">
+              <Ionicons name="cloud-offline-outline" size={48} color="#cbd5e1" />
+              <Text className="text-slate-400 font-black text-center mt-4 text-[10px] uppercase tracking-widest">
+                {t('connection_error')}
+              </Text>
+              <Text className="text-slate-300 font-bold text-center mt-2 text-[10px]">
+                {t('pull_to_retry')}
+              </Text>
             </View>
           ) : (
             <View className="flex-1 py-20 items-center justify-center px-10">

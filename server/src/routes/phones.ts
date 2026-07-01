@@ -170,7 +170,8 @@ router.post('/changes/:id/publish', async (req, res) => {
 // DELETE PHONE
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
-  
+  const { userId } = req.body;
+
   try {
     const phoneToDelete = await prisma.phone.findUnique({ where: { id } });
     
@@ -179,6 +180,18 @@ router.delete('/:id', async (req, res) => {
     }
 
     await prisma.phone.delete({ where: { id } });
+
+    // Record deletion in audit log — never publishable, just for history
+    if (userId) {
+      await prisma.systemChange.create({
+        data: {
+          type: 'DELETED',
+          modelName: phoneToDelete.name,
+          userId: Number(userId),
+          isPublished: false,
+        }
+      });
+    }
     
     res.json({ message: "Phone deleted successfully" });
   } catch (error) {

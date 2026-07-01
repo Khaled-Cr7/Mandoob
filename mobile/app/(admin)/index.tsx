@@ -36,6 +36,10 @@ export default function AdminPhoneManagement() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ id: '', name: '', brandId: null as number | null, price: '' });
+  const [connectionError, setConnectionError] = useState(false);
+
+  const CACHE_ADMIN_PHONES = "cache_admin_phones";
+  const CACHE_BRANDS_KEY = "cache_available_brands";
 
   const checkNotifications = async () => {
     if (!userId) return;
@@ -55,13 +59,27 @@ export default function AdminPhoneManagement() {
 
 
   useEffect(() => {
+    const loadCachedBrands = async () => {
+      try {
+        const cached = await AsyncStorage.getItem(CACHE_BRANDS_KEY);
+        if (cached) setAvailableBrands(JSON.parse(cached));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
     const fetchBrands = async () => {
       try {
         const response = await fetch(`${API_URL}/phones/brands`);
-        const data = await response.json();
-        setAvailableBrands(data);
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableBrands(data);
+          await AsyncStorage.setItem(CACHE_BRANDS_KEY, JSON.stringify(data));
+        } else {
+          await loadCachedBrands();
+        }
       } catch (error) {
-        console.error("Brand fetch failed:", error);
+        await loadCachedBrands();
       }
     };
     fetchBrands();
@@ -78,25 +96,30 @@ export default function AdminPhoneManagement() {
     handleLanguageToggle(i18n, t, userId);
   };
   
-  const fetchPhones = async () => {
-    setLoading(true);
-    try {
-      // 1. Load cache first and show immediately
-      const cached = await AsyncStorage.getItem('phones_cache_admin');
-      if (cached) setPhones(JSON.parse(cached));
+  const fetchPhones = async (forceRefresh = false) => {
+    if (!forceRefresh) setLoading(true);
+    setConnectionError(false);
 
+    try {
       const brandQuery = selectedBrands.length === 0 ? 'ALL' : selectedBrands.join(',');
       const url = `${API_URL}/phones?brands=${brandQuery}&sortType=${sortType}&sortOrder=${sortOrder}&search=${search}`;
       
       const response = await fetch(url);
-      const data = await response.json();
-
-      // 2. Update display and save fresh data to cache
-      setPhones(data);
-      await AsyncStorage.setItem('phones_cache_admin', JSON.stringify(data));
+      if (response.ok) {
+        const data = await response.json();
+        setPhones(data);
+        await AsyncStorage.setItem(CACHE_ADMIN_PHONES, JSON.stringify(data));
+      } else {
+        throw new Error("Downstream connection failed");
+      }
     } catch (error) {
-      // 3. Fetch failed (no internet) — cache already showing, do nothing
-      console.log('Admin: fetch failed, showing cached data');
+      const cached = await AsyncStorage.getItem(CACHE_ADMIN_PHONES);
+      if (cached) {
+        setPhones(JSON.parse(cached));
+      } else {
+        setPhones([]);
+        if (!forceRefresh) setConnectionError(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -202,14 +225,18 @@ export default function AdminPhoneManagement() {
         style: "destructive", 
         onPress: async () => {
           try {
-            await fetch(`${API_URL}/phones/${id}`, { 
+            const res = await fetch(`${API_URL}/phones/${id}`, { 
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ userId: Number(userId) }) 
             });
-            fetchPhones();
+            if (res.ok) {
+              fetchPhones(true);
+            } else {
+              Alert.alert(t('error'), t('connection_error'));
+            }
           } catch (e) {
-            Alert.alert(t('error'), t('server_rejected'));
+            Alert.alert(t('error'), t('connection_error'));
           }
         } 
       }
