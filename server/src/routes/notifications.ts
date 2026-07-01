@@ -79,6 +79,31 @@ router.post('/mark-all-read', async (req, res) => {
 });
 
 
+// DELETE /api/notifications/delete-many
+router.delete('/delete-many', async (req, res) => {
+  const { ids } = req.body;
+  try {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "No IDs provided" });
+    }
+
+    // First delete all read receipts for these notifications
+    await prisma.notificationRead.deleteMany({
+      where: { notificationId: { in: ids } }
+    });
+
+    // Then delete the notifications themselves
+    await prisma.notification.deleteMany({
+      where: { id: { in: ids } }
+    });
+
+    res.json({ success: true, deleted: ids.length });
+  } catch (error) {
+    console.error("Delete notifications error:", error);
+    res.status(500).json({ message: "Failed to delete notifications" });
+  }
+});
+
 // POST /api/notifications/register-token
 router.post('/register-token', async (req, res) => {
   const { userId, deviceId, pushToken } = req.body;

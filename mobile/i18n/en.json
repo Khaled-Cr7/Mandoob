@@ -206,5 +206,7 @@
   "fill_all_fields": "Please fill in all required fields.",
   "admins": "Admins",
   "pull_to_retry": "Pull down to retry",
-  "recorded": "RECORDED"
+  "recorded": "RECORDED",
+  "selected": "selected",
+  "delete_notif_confirm": "Are you sure you want to delete"
 }

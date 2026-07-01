@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,10 @@ export default function NotificationListScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [connectionError, setConnectionError] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const CACHE_NOTIF_KEY = `cache_notifications_${userId}`;
+  const isMasterAdmin = Number(userId) === 1 || Number(userId) === 4;
 
 
   const renderNotificationMessage = (item: any) => {
@@ -110,15 +113,81 @@ export default function NotificationListScreen() {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.length === 0) return;
+    Alert.alert(
+      t('system_delete'),
+      `${t('delete_notif_confirm')} ${selectedIds.length} ${t('notifications').toLowerCase()}?`,
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await fetch(`${API_URL}/notifications/delete-many`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds })
+              });
+              if (res.ok) {
+                setSelectedIds([]);
+                setSelectMode(false);
+                fetchNotifications();
+              } else {
+                Alert.alert(t('error'), t('action_failed'));
+              }
+            } catch (e) {
+              Alert.alert(t('error'), t('connection_error'));
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View className="flex-1 bg-slate-50">
       {/* HEADER */}
       <View className="pt-14 px-6 pb-6 bg-white border-b border-slate-100 flex-row justify-between items-center">
-        <TouchableOpacity onPress={() => router.back()} className="p-2 bg-slate-100 rounded-xl">
-          <Ionicons name="chevron-back" size={20} color="#1e293b" />
+        <TouchableOpacity 
+          onPress={() => { 
+            if (selectMode) { 
+              setSelectMode(false); 
+              setSelectedIds([]); 
+            } else { 
+              router.back(); 
+            } 
+          }} 
+          className="p-2 bg-slate-100 rounded-xl"
+        >
+          <Ionicons name={selectMode ? "close" : "chevron-back"} size={20} color="#1e293b" />
         </TouchableOpacity>
-        <Text className="text-xl font-black text-slate-900 tracking-tighter">{t('notifications')}</Text>
-        <View className="w-10" />
+        <Text className="text-xl font-black text-slate-900 tracking-tighter">
+          {selectMode && selectedIds.length > 0 ? `${selectedIds.length} ${t('selected')}` : t('notifications')}
+        </Text>
+        <View className="flex-row gap-x-2">
+          {isMasterAdmin && !selectMode && (
+            <TouchableOpacity onPress={() => setSelectMode(true)} className="p-2 bg-slate-100 rounded-xl">
+              <Ionicons name="checkmark-circle-outline" size={20} color="#1e293b" />
+            </TouchableOpacity>
+          )}
+          {selectMode && (
+            <TouchableOpacity 
+              onPress={handleDeleteSelected}
+              className={`p-2 rounded-xl ${selectedIds.length > 0 ? 'bg-red-50' : 'bg-slate-100'}`}
+            >
+              <Ionicons name="trash" size={20} color={selectedIds.length > 0 ? '#ef4444' : '#94a3b8'} />
+            </TouchableOpacity>
+          )}
+          {!selectMode && <View className="w-10" />}
+        </View>
       </View>
 
       <FlatList
@@ -151,19 +220,37 @@ export default function NotificationListScreen() {
         }
         renderItem={({ item }: any) => {
           const iconConfig = getIconConfig(item.type, item.isRead);
+          const isSelected = selectedIds.includes(item.id);
           
           return (
-            <View className={`mb-3 p-5 rounded-[28px] border flex-row items-start ${item.isRead ? 'bg-white border-slate-100' : 'bg-blue-50/50 border-blue-100'}`}>
-              <View className={`w-10 h-10 rounded-full items-center justify-center ${item.isRead ? 'bg-slate-100' : 'bg-white shadow-sm'}`}>
-                <Ionicons name={iconConfig.name} size={18} color={iconConfig.color} />
-              </View>
+            <TouchableOpacity
+              activeOpacity={selectMode ? 0.6 : 1}
+              onPress={() => { if (selectMode) toggleSelect(item.id); }}
+              className={`mb-3 p-5 rounded-[28px] border flex-row items-start ${
+                isSelected ? 'bg-red-50 border-red-200' :
+                item.isRead ? 'bg-white border-slate-100' : 'bg-blue-50/50 border-blue-100'
+              }`}
+            >
+              {selectMode ? (
+                <View className="w-10 h-10 rounded-full items-center justify-center">
+                  <Ionicons 
+                    name={isSelected ? "checkmark-circle" : "ellipse-outline"} 
+                    size={24} 
+                    color={isSelected ? "#ef4444" : "#cbd5e1"} 
+                  />
+                </View>
+              ) : (
+                <View className={`w-10 h-10 rounded-full items-center justify-center ${item.isRead ? 'bg-slate-100' : 'bg-white shadow-sm'}`}>
+                  <Ionicons name={iconConfig.name} size={18} color={iconConfig.color} />
+                </View>
+              )}
               
               <View className="flex-1 ml-4">
                 <View className="flex-row justify-between items-start">
                   <Text className={`flex-1 text-sm leading-5 mb-1 ${item.isRead ? 'text-slate-600 font-medium' : 'text-slate-900 font-black'}`}>
                     {renderNotificationMessage(item)}
                   </Text>
-                  {!item.isRead ? (
+                  {!item.isRead && !selectMode ? (
                     <View className="w-2.5 h-2.5 bg-blue-500 rounded-full ml-2 mt-1.5" />
                   ) : null}
                 </View>
@@ -171,7 +258,7 @@ export default function NotificationListScreen() {
                   {formatTime(item.createdAt)}
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         }}
       />
