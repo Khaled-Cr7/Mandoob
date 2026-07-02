@@ -15,7 +15,7 @@ import { handleLanguageToggle } from '../../utils/language';
 
 export default function AdminPhoneManagement() {
   const { t } = useTranslation();
-  const [phones, setPhones] = useState([]);
+  const [phones, setPhones] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedBrands, setSelectedBrands] = useState<number[]>([]); 
@@ -40,6 +40,7 @@ export default function AdminPhoneManagement() {
 
   const CACHE_ADMIN_PHONES = "cache_admin_phones";
   const CACHE_BRANDS_KEY = "cache_available_brands";
+  const CACHE_ADMIN_FULL = 'cache_admin_phones_full';
 
   const checkNotifications = async () => {
     if (!userId) return;
@@ -96,6 +97,40 @@ export default function AdminPhoneManagement() {
     handleLanguageToggle(i18n, t, userId);
   };
   
+  const applyOfflineFilters = (allPhones: any[]) => {
+    let result = [...allPhones];
+
+    // 1. Search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(p =>
+        p.name?.toLowerCase().includes(q) ||
+        p.id?.toLowerCase().includes(q)
+      );
+    }
+
+    // 2. Brand filter
+    if (selectedBrands.length > 0) {
+      result = result.filter(p => selectedBrands.includes(p.brandId));
+    }
+
+    // 3. Sort
+    const dir = sortOrder === 'desc' ? -1 : 1;
+    if (sortType === 'DATE') {
+      result.sort((a, b) =>
+        dir * (new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime())
+      );
+    } else {
+      result.sort((a, b) => {
+        const brandCompare = (a.brand || '').localeCompare(b.brand || '') * dir;
+        if (brandCompare !== 0) return brandCompare;
+        return (a.id || '').localeCompare(b.id || '') * dir;
+      });
+    }
+
+    return result;
+  };
+
   const fetchPhones = async (forceRefresh = false) => {
     if (!forceRefresh) setLoading(true);
     setConnectionError(false);
@@ -109,13 +144,24 @@ export default function AdminPhoneManagement() {
         const data = await response.json();
         setPhones(data);
         await AsyncStorage.setItem(CACHE_ADMIN_PHONES, JSON.stringify(data));
+
+        // Always save the full unfiltered list separately for offline filtering
+        if (selectedBrands.length === 0 && !search) {
+          await AsyncStorage.setItem(CACHE_ADMIN_FULL, JSON.stringify(data));
+        }
       } else {
         throw new Error("Downstream connection failed");
       }
     } catch (error) {
-      const cached = await AsyncStorage.getItem(CACHE_ADMIN_PHONES);
-      if (cached) {
-        setPhones(JSON.parse(cached));
+      // Try filtered cache first, then fall back to full cache with client-side filtering
+      const filteredCached = await AsyncStorage.getItem(CACHE_ADMIN_PHONES);
+      const fullCached = await AsyncStorage.getItem(CACHE_ADMIN_FULL);
+
+      if (fullCached) {
+        const full = JSON.parse(fullCached);
+        setPhones(applyOfflineFilters(full));
+      } else if (filteredCached) {
+        setPhones(JSON.parse(filteredCached));
       } else {
         setPhones([]);
         if (!forceRefresh) setConnectionError(true);

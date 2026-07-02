@@ -74,7 +74,7 @@ export default function PersonnelManagement() {
   const params = useLocalSearchParams();
   const userId = params.userId || "11";
   const { t } = useTranslation();
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -90,6 +90,7 @@ export default function PersonnelManagement() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [connectionError, setConnectionError] = useState(false);
   const CACHE_USERS_KEY = 'cache_users_list';
+  const CACHE_USERS_FULL = 'cache_users_full';
 
 
   const toggleLanguage = () => {
@@ -189,13 +190,30 @@ export default function PersonnelManagement() {
         const data = await res.json();
         setUsers(data);
         await AsyncStorage.setItem(CACHE_USERS_KEY, JSON.stringify(data));
+
+        // Save full unfiltered list when no search active
+        if (!search) {
+          await AsyncStorage.setItem(CACHE_USERS_FULL, JSON.stringify(data));
+        }
       } else {
         throw new Error('Server error');
       }
     } catch (e) {
-      const cached = await AsyncStorage.getItem(CACHE_USERS_KEY);
-      if (cached) {
-        setUsers(JSON.parse(cached));
+      const fullCached = await AsyncStorage.getItem(CACHE_USERS_FULL);
+      const filteredCached = await AsyncStorage.getItem(CACHE_USERS_KEY);
+
+      if (fullCached) {
+        const full = JSON.parse(fullCached);
+        const q = search.toLowerCase();
+        const filtered = q
+          ? full.filter((u: any) =>
+              u.name?.toLowerCase().includes(q) ||
+              u.username?.toLowerCase().includes(q)
+            )
+          : full;
+        setUsers(filtered);
+      } else if (filteredCached) {
+        setUsers(JSON.parse(filteredCached));
       } else {
         setUsers([]);
         setConnectionError(true);

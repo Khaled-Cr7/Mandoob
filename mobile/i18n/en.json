@@ -208,5 +208,6 @@
   "pull_to_retry": "Pull down to retry",
   "recorded": "RECORDED",
   "selected": "selected",
-  "delete_notif_confirm": "Are you sure you want to delete"
+  "delete_notif_confirm": "Are you sure you want to delete",
+  "select": "Select"
 }
