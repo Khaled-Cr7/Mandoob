@@ -366,7 +366,8 @@ router.get('/', async (req, res) => {
  
     let results = phones.map(p => ({
       ...p,
-      brand: p.brand ? p.brand.name : "UNKNOWN", 
+      brand: p.brand ? p.brand.name : "UNKNOWN",
+      brandId: p.brandId,
       isFavorite: p.favoritedBy?.length > 0,
       favDate: p.favoritedBy?.[0]?.createdAt || null
     }));

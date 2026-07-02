@@ -16,7 +16,6 @@ export default function AdminManagement() {
   const { t } = useTranslation();
   const params = useLocalSearchParams();
   const userId = params.userId || "11";
-
   const [hasAccess, setHasAccess] = useState(false);
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,6 +36,7 @@ export default function AdminManagement() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [connectionError, setConnectionError] = useState(false);
   const CACHE_ADMINS_KEY = 'cache_admins_list';
+  const CACHE_ADMINS_FULL = 'cache_admins_full';
 
   const toggleLanguage = () => {
     handleLanguageToggle(i18n, t, userId);
@@ -69,13 +69,30 @@ export default function AdminManagement() {
         const data = await response.json();
         setAdmins(data);
         await AsyncStorage.setItem(CACHE_ADMINS_KEY, JSON.stringify(data));
+
+        // Save full unfiltered list when no search active
+        if (!search) {
+          await AsyncStorage.setItem(CACHE_ADMINS_FULL, JSON.stringify(data));
+        }
       } else {
         throw new Error('Server error');
       }
     } catch (e) {
-      const cached = await AsyncStorage.getItem(CACHE_ADMINS_KEY);
-      if (cached) {
-        setAdmins(JSON.parse(cached));
+      const fullCached = await AsyncStorage.getItem(CACHE_ADMINS_FULL);
+      const filteredCached = await AsyncStorage.getItem(CACHE_ADMINS_KEY);
+
+      if (fullCached) {
+        const full = JSON.parse(fullCached);
+        const q = search.toLowerCase();
+        const filtered = q
+          ? full.filter((u: any) =>
+              u.name?.toLowerCase().includes(q) ||
+              u.username?.toLowerCase().includes(q)
+            )
+          : full;
+        setAdmins(filtered);
+      } else if (filteredCached) {
+        setAdmins(JSON.parse(filteredCached));
       } else {
         setAdmins([]);
         setConnectionError(true);

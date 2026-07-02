@@ -208,5 +208,6 @@
   "pull_to_retry": "اسحب للأسفل للمحاولة مجدداً",
   "recorded": "مسجّل",
   "selected": "محدد",
-  "delete_notif_confirm": "هل أنت متأكد من حذف"
+  "delete_notif_confirm": "هل أنت متأكد من حذف",
+  "select": "تحديد"
 }

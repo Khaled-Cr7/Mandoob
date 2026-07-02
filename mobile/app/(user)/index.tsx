@@ -13,7 +13,7 @@ export default function UserInventoryScreen() {
   const { userId } = useSession() || "11";
   const [activeTab, setActiveTab] = useState<'ALL' | 'FAVORITES'>('ALL');
   const { t } = useTranslation();
-  const [phones, setPhones] = useState([]);
+  const [phones, setPhones] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
@@ -28,6 +28,7 @@ export default function UserInventoryScreen() {
   const CACHE_PHONES_KEY = `cache_user_phones_${userId}`;
   const CACHE_FAVORITES_KEY = `cache_user_favorites_${userId}`;
   const CACHE_BRANDS_KEY = "cache_available_brands";
+  const CACHE_USER_FULL = `cache_user_phones_full_${userId}`;
 
   const checkNotifications = async () => {
     if (!userId) return;
@@ -111,6 +112,45 @@ export default function UserInventoryScreen() {
     }
   };
 
+  const applyOfflineFilters = (allPhones: any[], favoritesOnly = false) => {
+    let result = [...allPhones];
+
+    // 1. Favorites tab
+    if (favoritesOnly) {
+      result = result.filter(p => p.isFavorite);
+    }
+
+    // 2. Search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(p =>
+        p.name?.toLowerCase().includes(q) ||
+        p.id?.toLowerCase().includes(q)
+      );
+    }
+
+    // 3. Brand filter
+    if (selectedBrands.length > 0) {
+      result = result.filter(p => selectedBrands.includes(p.brandId));
+    }
+
+    // 4. Sort
+    const dir = sortOrder === 'desc' ? -1 : 1;
+    if (sortType === 'DATE') {
+      result.sort((a, b) =>
+        dir * (new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime())
+      );
+    } else {
+      result.sort((a, b) => {
+        const brandCompare = (a.brand || '').localeCompare(b.brand || '') * dir;
+        if (brandCompare !== 0) return brandCompare;
+        return (a.id || '').localeCompare(b.id || '') * dir;
+      });
+    }
+
+    return result;
+  };
+
   const fetchPhones = async (forceRefresh = false) => {
     if (!forceRefresh) setLoading(true);
     setConnectionError(false);
@@ -118,7 +158,6 @@ export default function UserInventoryScreen() {
     const brandQuery = selectedBrands.length === 0 ? 'ALL' : selectedBrands.join(',');
     const favQuery = activeTab === 'FAVORITES' ? '&favoritesOnly=true' : '';
     const url = `${API_URL}/phones?brands=${brandQuery}&sortType=${sortType}&sortOrder=${sortOrder}&search=${search}&userId=${userId}${favQuery}`;
-
     const cacheKey = activeTab === 'FAVORITES' ? CACHE_FAVORITES_KEY : CACHE_PHONES_KEY;
 
     try {
@@ -127,13 +166,23 @@ export default function UserInventoryScreen() {
         const data = await response.json();
         setPhones(data);
         await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
+
+        // Save full unfiltered ALL tab list for offline filtering
+        if (selectedBrands.length === 0 && !search && activeTab === 'ALL') {
+          await AsyncStorage.setItem(CACHE_USER_FULL, JSON.stringify(data));
+        }
       } else {
         throw new Error("Server downstream communication error.");
       }
     } catch (error) {
-      const cachedData = await AsyncStorage.getItem(cacheKey);
-      if (cachedData) {
-        setPhones(JSON.parse(cachedData));
+      const fullCached = await AsyncStorage.getItem(CACHE_USER_FULL);
+      const filteredCached = await AsyncStorage.getItem(cacheKey);
+
+      if (fullCached) {
+        const full = JSON.parse(fullCached);
+        setPhones(applyOfflineFilters(full, activeTab === 'FAVORITES'));
+      } else if (filteredCached) {
+        setPhones(JSON.parse(filteredCached));
       } else {
         setPhones([]);
         if (!forceRefresh) setConnectionError(true);

@@ -172,7 +172,7 @@ export default function NotificationListScreen() {
         <Text className="text-xl font-black text-slate-900 tracking-tighter">
           {selectMode && selectedIds.length > 0 ? `${selectedIds.length} ${t('selected')}` : t('notifications')}
         </Text>
-        <View className="flex-row gap-x-2">
+         <View className="w-10 items-end">
           {isMasterAdmin && !selectMode && (
             <TouchableOpacity onPress={() => setSelectMode(true)} className="p-2 bg-slate-100 rounded-xl">
               <Ionicons name="checkmark-circle-outline" size={20} color="#1e293b" />
@@ -186,7 +186,6 @@ export default function NotificationListScreen() {
               <Ionicons name="trash" size={20} color={selectedIds.length > 0 ? '#ef4444' : '#94a3b8'} />
             </TouchableOpacity>
           )}
-          {!selectMode && <View className="w-10" />}
         </View>
       </View>
 
