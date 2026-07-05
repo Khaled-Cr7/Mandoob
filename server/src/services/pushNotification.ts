@@ -22,9 +22,9 @@ export async function sendBroadcastNotification(log: any, excludeUserId?: number
 
     // Handle payload generation purely in English
     if (log.type === 'PRICE_UPDATE') {
-      body = `New Price: ${log.modelName} = ${log.newValue} SAR`;
+      body = `New Price:\n${log.brand} ${log.modelName} = ${log.newValue} SAR`;
     } else if (log.type === 'ADDED') {
-      body = `New Model: ${log.modelName} = ${log.newValue} SAR`;
+      body = `New Model:\n${log.brand} ${log.modelName} = ${log.newValue} SAR`;
     }
 
     if (body) {

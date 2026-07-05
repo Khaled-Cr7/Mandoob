@@ -25,11 +25,11 @@ export default function NotificationListScreen() {
 
    switch (item.type) {
     case 'PRICE_UPDATE':
-      return `New Price: ${item.modelName} = ${item.newPrice} SAR`;
-
-    case 'ADDED':
-      return `New Model: ${item.modelName} = ${item.newPrice} SAR`;
+      return `New Price:\n${item.brand || ''} ${item.modelName} = ${item.newPrice} SAR`;
       
+    case 'ADDED':
+      return `New Model:\n${item.brand || ''} ${item.modelName} = ${item.newPrice} SAR`;
+
       default:
         return item.message || "";
     }

@@ -2,5 +2,7 @@
 - the brand filter (all) stays still when you scroll in brands.
 - handle navigation buttons in all pages
 - fix all the pages to use space better
+-  make the brand null when trying to add a new phone.
+- after the phone is added don't leave the modal.
 - when changing language leave the phone list same as it is.
 - add export to pdf and excel.
