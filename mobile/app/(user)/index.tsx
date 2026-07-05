@@ -210,99 +210,113 @@ export default function UserInventoryScreen() {
   return (
     <View className="flex-1 bg-slate-50">
       {/* --- SYSTEM HEADER --- */}
-      <View className="pt-14 px-6 pb-6 bg-white border-b border-slate-100">
-        <View className="flex-row justify-between items-center mb-6">
+      <View className="pt-14 px-5 pb-2 bg-white border-b border-slate-100">
+        {/* ROW 1: Title + Notification */}
+        <View className="flex-row justify-between items-center mb-2">
           <View>
-            <Text className="text-blue-600 text-[10px] font-black uppercase tracking-[3px]">{t("kunooz")}</Text>
-            <Text className="text-3xl font-black text-slate-900 tracking-tighter">{t('inventory')}</Text>
+            <Text className="text-blue-600 text-[9px] font-black uppercase tracking-[3px]">{t("kunooz")}</Text>
+            <Text className="text-2xl font-black text-slate-900">{t('price_list')}</Text>
           </View>
           <TouchableOpacity 
             onPress={() => router.push({ pathname: '/(user)/notifications', params: { userId } })}
-            className="p-3 bg-slate-100 rounded-2xl"
+            className="p-2.5 bg-slate-100 rounded-2xl"
           >
-            <Ionicons name="notifications" size={22} color="#1e293b" />
-            {/* ONLY SHOW RED DOT IF UNREAD > 0 */}
+            <Ionicons name="notifications" size={20} color="#1e293b" />
             {unreadCount > 0 && (
-              <View className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+              <View className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
             )}
           </TouchableOpacity>
         </View>
-        
-        {/* Search Bar */}
-        <View className="flex-row items-center bg-slate-100 rounded-2xl px-4 h-14 border border-slate-200 shadow-inner">
-          <Ionicons name="search" size={20} color="#94a3b8" />
+
+        {/* ROW 2: Sort controls */}
+        {/* --- UNIFIED FILTER & SORT CONTAINER --- */}
+        <View className="bg-slate-50/80 p-2 rounded-2xl border-l-4 border-blue-600 mb-2">
+          
+          {/* ROW 2: Left Label + Right Sort Controls */}
+          <View className="flex-row justify-between items-center mb-1.5">
+            {/* Left Label (Now directly above brands) */}
+            <View className="flex-row items-center pl-1">
+              <Ionicons name="filter" size={11} color="#2563eb" />
+              <Text className="text-slate-900 font-black ml-1 text-[10px] uppercase tracking-wider">
+                {t('filters') || 'Filters'}
+              </Text>
+            </View>
+
+            {/* Right Sort controls */}
+            <View className="flex-row items-center gap-x-1.5">
+              <TouchableOpacity 
+                onPress={() => setSortType(prev => prev === 'ID' ? 'DATE' : 'ID')}
+                className="flex-row items-center bg-white px-2 py-1 rounded-xl border border-slate-200"
+              >
+                <Ionicons name={sortType === 'ID' ? "text" : "calendar"} size={10} color="#2563eb" />
+                <Text className="text-slate-700 font-black ml-1 text-[9px] uppercase">
+                  {sortType === 'ID' ? t('sort_ref') : t('sort_date')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                className="bg-white p-1 rounded-xl border border-slate-200"
+              >
+                <Ionicons name={sortOrder === 'asc' ? "arrow-up" : "arrow-down"} size={12} color="#2563eb" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ROW 3: ALL fixed + scrollable brands */}
+          <View className="flex-row items-center">
+            {/* Fixed ALL */}
+            <TouchableOpacity
+              onPress={() => toggleBrand('ALL')}
+              className={`px-3 py-1 rounded-xl border ${selectedBrands.length === 0 ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}
+            >
+              <Text className={`font-black text-[9px] ${selectedBrands.length === 0 ? 'text-white' : 'text-slate-500'}`}>ALL</Text>
+            </TouchableOpacity>
+
+            {/* Separator */}
+            <View className="w-[1px] h-4 bg-slate-300 mx-1.5" />
+
+            {/* Scrollable brands */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+              {availableBrands.map((brand) => (
+                <TouchableOpacity
+                  key={brand.id}
+                  onPress={() => toggleBrand(brand.id)}
+                  className={`px-3 py-1 rounded-xl mr-1.5 border ${selectedBrands.includes(brand.id) ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'}`}
+                >
+                  <Text className={`font-black text-[9px] ${selectedBrands.includes(brand.id) ? 'text-white' : 'text-slate-500'}`}>
+                    {brand.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+
+        {/* ROW 4: Micro Search Bar */}
+        <View className="flex-row items-center bg-slate-100 rounded-xl px-3 h-9 border border-slate-200">
+          <Ionicons name="search" size={14} color="#94a3b8" />
           <TextInput 
             placeholder={t('search_placeholder')} 
             placeholderTextColor="#94a3b8"
-            className="flex-1 ml-3 text-slate-900 font-bold"
+            // Added style prop to strip out platform-specific font padding & force vertical centering
+            style={{ includeFontPadding: false, textAlignVertical: 'center' }}
+            className="flex-1 ml-2 text-slate-900 font-bold text-xs h-full py-0 justify-center items-center"
             value={search}
             onChangeText={setSearch}
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={20} color="#cbd5e1" />
+            <TouchableOpacity onPress={() => setSearch('')} className="p-0.5">
+              <Ionicons name="close-circle" size={14} color="#cbd5e1" />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* --- BRAND FILTERS --- */}
-      <View>
-        <View className="flex-row justify-between items-center px-6 mb-3 mt-4">
-          <Text className="text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('filter_brands')}</Text>
-          
-          <View className="flex-row gap-x-2">
-            {/* TOGGLE 1: TYPE (Alphabetical vs Date) */}
-            <TouchableOpacity 
-              onPress={() => setSortType(prev => prev === 'ID' ? 'DATE' : 'ID')}
-              className="flex-row items-center bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100"
-            >
-              <Ionicons name={sortType === 'ID' ? "text" : "calendar"} size={12} color="#2563eb" />
-              <Text className="text-blue-600 font-black ml-1.5 text-[9px] uppercase">
-                {sortType === 'ID' ? t('sort_ref') : t('sort_date')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* TOGGLE 2: DIRECTION (A-Z or Z-A) */}
-            <TouchableOpacity 
-              onPress={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-              className="bg-blue-50 p-1.5 rounded-xl border border-blue-100"
-            >
-              <Ionicons 
-                name={sortOrder === 'asc' ? "arrow-up" : "arrow-down"} 
-                size={14} 
-                color="#2563eb" 
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24 }}>
-          <TouchableOpacity
-            onPress={() => toggleBrand('ALL')}
-            className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.length === 0 ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-slate-200'}`}
-          >
-            <Text className={`font-black text-[11px] ${selectedBrands.length === 0 ? 'text-white' : 'text-slate-500'}`}>ALL</Text>
-          </TouchableOpacity>
-
-          {availableBrands.map((brand) => (
-            <TouchableOpacity
-              key={brand.id}
-              onPress={() => toggleBrand(brand.id)}
-              className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.includes(brand.id) ? 'bg-blue-600 border-blue-600' : 'bg-transparent border-slate-200'}`}
-            >
-              <Text className={`font-black text-[11px] ${selectedBrands.includes(brand.id) ? 'text-white' : 'text-slate-500'}`}>
-                {brand.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
       {/* --- SECTION TABS --- */}
-      <View className="flex-row px-6 mt-4">
+      <View className="flex-row px-6 mt-1">
         <TouchableOpacity 
           onPress={() => setActiveTab('ALL')}
-          className={`flex-1 py-3 items-center border-b-2 ${activeTab === 'ALL' ? 'border-blue-600' : 'border-transparent'}`}
+          className={`flex-1 py-2 items-center border-b-2 ${activeTab === 'ALL' ? 'border-blue-600' : 'border-transparent'}`}
         >
           <Text className={`font-black ${activeTab === 'ALL' ? 'text-blue-600' : 'text-slate-400'}`}>{t('all_phones')}</Text>
         </TouchableOpacity>
@@ -357,65 +371,68 @@ export default function UserInventoryScreen() {
             </View>
           )
         }
-       renderItem={({ item, index } : any) => (
-            <View className="mb-2 flex-row items-center">
-              <Text className="text-[10px] font-black text-slate-400 w-5 text-right mr-2">{index + 1}</Text>
-              <TouchableOpacity 
-                onPress={() => setSelectedPhone(item)}
-                activeOpacity={0.7}
-                className="flex-1 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm flex-row justify-between items-center"
-              >
-            
+       renderItem={({ item, index }: any) => (
+        <View className="mb-1.5 flex-row items-center">
+          {/* Index Number */}
+          <Text className="text-[10px] font-black text-slate-400 w-5 text-right mr-1.5">{index + 1}</Text>
+          
+          {/* Main Card */}
+          <TouchableOpacity 
+            onPress={() => setSelectedPhone(item)}
+            activeOpacity={0.7}
+            className="flex-1 px-3 py-2 bg-white rounded-xl border border-slate-100 shadow-sm flex-row justify-between items-center"
+          >
             {/* --- LEFT SECTION: INFO --- */}
-            <View className="flex-1 pr-3 min-w-0">
-              {/* TOP ROW: REF ID & BRAND (Items-baseline locks text position perfectly) */}
-              <View className="flex-row items-baseline mb-0.5">
-                <Text className="text-[9px] font-black text-slate-500 uppercase">
-                  {t('ref') + ":"}
-                </Text>
-                <Text className="text-[9px] font-black text-blue-500 tracking-tighter">
-                  {item.id}
-                </Text>
-                <View className="mx-1.5 w-1 h-1 bg-slate-300 rounded-full self-center" /> 
-                <View className="bg-slate-100 px-1.5 py-0.5 rounded">
-                  <Text className="text-[8px] text-slate-500 font-black uppercase tracking-wider">
-                    {item.brand + " "}
+            <View className="flex-1 pr-2 min-w-0">
+              {/* TOP ROW: Fully Inline Nested Row */}
+              <View className="flex-row items-center mb-1">
+                <Text className="text-[8px] font-black text-slate-400 uppercase">
+                  {t('ref') + ": "}
+                  <Text className="text-blue-500 tracking-tighter">
+                    {item.id}
                   </Text>
-                </View>
+                  
+                  {/* Inline dot separator */}
+                  <Text className="text-slate-300 px-1.5 font-normal">  •  </Text>
+                  
+                  {/* Inline Brand Text with its own styled properties */}
+                  <Text className="text-[7.5px] text-slate-500 font-black tracking-wider bg-slate-100 px-1 rounded">
+                    {" "}{item.brand}{" "}
+                  </Text>
+                </Text>
               </View>
               
-              {/* DEVICE NAME (Stepped down from text-xl to text-base) */}
-              <Text className="text-base font-black text-slate-900 leading-tight mb-2" numberOfLines={1}>
+              {/* DEVICE NAME (Tightened size and line-height) */}
+              <Text className="text-sm font-black text-slate-900 leading-tight" numberOfLines={1}>
                 {item.name}
               </Text>
+            </View>
 
-              {/* HEART ACTION (Slimmed padding and scaled fonts down) */}
+            {/* --- RIGHT SECTION: PRICE + HEART ACTION --- */}
+            <View className="flex-row items-center gap-x-1.5 shrink-0">
+              {/* Compact Price Block */}
+              <View className="bg-blue-50 px-2 py-1 rounded-xl">
+                <View className="flex-row items-baseline">
+                  <Text className="text-sm font-black text-blue-700">{item.price}</Text>
+                  <Text className="text-[7px] font-black text-blue-400 ml-0.5">{t('currency')}</Text>
+                </View>
+              </View>
+
+              {/* Minimalist Heart Icon Button */}
               <TouchableOpacity 
                 onPress={() => toggleFavorite(item.id)} 
-                className={`flex-row items-center self-start px-2 py-1 rounded-full border 
-                  ${item.isFavorite ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}
+                className={`p-2 rounded-xl border ${item.isFavorite ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}
               >
                 <Ionicons 
                   name={item.isFavorite ? "heart" : "heart-outline"} 
-                  size={11} 
+                  size={14} 
                   color={item.isFavorite ? "#ef4444" : "#94a3b8"} 
                 />
-                <Text className={`text-[8px] ml-1 font-black uppercase ${item.isFavorite ? 'text-red-500' : 'text-slate-400'}`}>
-                  {item.isFavorite ? t('saved') : t('savefavorite')}
-                </Text>
               </TouchableOpacity>
             </View>
-
-            {/* --- RIGHT SECTION: PRICE (Made compact to keep card height slim) --- */}
-            <View className="bg-blue-50 px-3 py-2 rounded-2xl ml-2 shrink-0">
-              <View className="flex-row items-baseline">
-                <Text className="text-lg font-black text-blue-700">{item.price}</Text>
-                <Text className="text-[8px] font-black text-blue-400 ml-0.5">{t('currency')}</Text>
-              </View>
-            </View>
-            </TouchableOpacity>
-          </View>
-        )}
+          </TouchableOpacity>
+        </View>
+      )}
       />
 
       {/* --- PHONE DETAIL POPUP --- */}

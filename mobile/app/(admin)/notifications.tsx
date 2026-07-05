@@ -33,7 +33,9 @@ export default function NotificationListScreen() {
           new: item.newPrice 
         });
       case 'ADDED':
-        return t('notif_added', { model: item.modelName });
+        return item.newPrice
+          ? t('notif_added_price', { model: item.modelName, price: item.newPrice })
+          : t('notif_added', { model: item.modelName });
       default:
         return item.message || "";
     }

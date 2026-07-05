@@ -167,39 +167,36 @@ export default function DeviceSecureManagement() {
   return (
     <View className="flex-1 bg-slate-900">
       {/* HEADER */}
-      <View className="pt-14 px-6 pb-6 bg-slate-900">
-        <View className="absolute top-14 right-6 flex-row items-center space-x-3 gap-x-1.5">
-          {/* Language Toggle */}
-          <TouchableOpacity 
-            onPress={toggleLanguage}
-            className="flex-row items-center bg-slate-800 px-3 py-2 rounded-xl border border-slate-700"
-          >
-            <Ionicons name="globe-outline" size={18} color="#fbbf24" />
-            <Text className="text-white font-black text-[10px] ml-2 uppercase">
-              {i18n.language === 'ar' ? 'EN' : 'AR'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Logout Button */}
-          <TouchableOpacity 
-            onPress={confirmSignOut}
-            className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20"
-          >
-            <Ionicons name="log-out-outline" size={18} color="#ef4444" />
-          </TouchableOpacity>
-        </View>
-        <View className="flex-row justify-between items-center mb-6">
-            <View>
-                <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">{t('special_admin')}</Text>
-                <Text className="text-3xl font-black text-white mb-6">{t('device_control')}</Text>
-                </View>
+      <View className="pt-14 px-5 pb-3 bg-slate-900">
+        <View className="flex-row justify-between items-center mb-3">
+          <View>
+            <Text className="text-amber-500 text-[9px] font-black uppercase tracking-[3px]">{t('special_admin')}</Text>
+            <Text className="text-2xl font-black text-white">{t('device_control')}</Text>
+          </View>
+          <View className="flex-row items-center gap-x-2">
+            <TouchableOpacity
+              onPress={toggleLanguage}
+              className="flex-row items-center bg-slate-800 px-2.5 py-2 rounded-xl border border-slate-700"
+            >
+              <Ionicons name="globe-outline" size={16} color="#fbbf24" />
+              <Text className="text-white font-black text-[9px] ml-1.5 uppercase">
+                {i18n.language === 'ar' ? 'EN' : 'AR'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={confirmSignOut}
+              className="p-2 bg-red-500/10 rounded-xl border border-red-500/20"
+            >
+              <Ionicons name="log-out-outline" size={16} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
         </View>
         <View className="flex-row bg-slate-800 p-1.5 rounded-2xl border border-slate-700">
           {(['PENDING', 'ACTIVE', 'DENIED'] as const).map((tab) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={tab}
               onPress={() => setActiveTab(tab)}
-              className={`flex-1 py-3 rounded-xl items-center ${activeTab === tab ? 'bg-amber-500' : ''}`}
+              className={`flex-1 py-2.5 rounded-xl items-center ${activeTab === tab ? 'bg-amber-500' : ''}`}
             >
               <Text className={`text-[10px] font-black uppercase tracking-widest ${activeTab === tab ? 'text-slate-900' : 'text-slate-400'}`}>
                 {t(tab.toLowerCase())}

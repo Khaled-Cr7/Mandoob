@@ -1,42 +1,39 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform, DevSettings, Keyboard, KeyboardEvent } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal, Keyboard, KeyboardEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../constants';
 import { router, useFocusEffect } from 'expo-router';
-import { I18nManager } from 'react-native';
-import * as Updates from 'expo-updates';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl } from 'react-native';
 import i18n from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSession } from '../../context/SessionContext';
-import * as Application from 'expo-application';
 import { handleLanguageToggle } from '../../utils/language';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AdminPhoneManagement() {
   const { t } = useTranslation();
   const [phones, setPhones] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectedBrands, setSelectedBrands] = useState<number[]>([]); 
+  const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
   const [availableBrands, setAvailableBrands] = useState<{id: number, name: string}[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isBrandModalVisible, setIsBrandModalVisible] = useState(false);
   const [isSavingBrand, setIsSavingBrand] = useState(false);
   const [brandForm, setBrandForm] = useState({ id: null as number | null, name: '' });
-  const [sortType, setSortType] = useState<'ID' | 'DATE'>('ID'); // Default: Alphabetical Ref
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Default: A-Z
+  const [sortType, setSortType] = useState<'ID' | 'DATE'>('ID');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const { userId } = useSession() || {};
   const [unreadCount, setUnreadCount] = useState(0);
   const { confirmSignOut } = useSession();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [selectedPhone, setSelectedPhone] = useState<any>(null);
-
-  // --- NEW: FORM & MODAL STATES ---
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ id: '', name: '', brandId: null as number | null, price: '' });
   const [connectionError, setConnectionError] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const CACHE_ADMIN_PHONES = "cache_admin_phones";
   const CACHE_BRANDS_KEY = "cache_available_brands";
@@ -52,23 +49,15 @@ export default function AdminPhoneManagement() {
     } catch (e) { console.log(e); }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      checkNotifications();
-    }, [userId])
-  );
-
+  useFocusEffect(useCallback(() => { checkNotifications(); }, [userId]));
 
   useEffect(() => {
     const loadCachedBrands = async () => {
       try {
         const cached = await AsyncStorage.getItem(CACHE_BRANDS_KEY);
         if (cached) setAvailableBrands(JSON.parse(cached));
-      } catch (e) {
-        console.error(e);
-      }
+      } catch (e) { console.error(e); }
     };
-
     const fetchBrands = async () => {
       try {
         const response = await fetch(`${API_URL}/phones/brands`);
@@ -92,34 +81,22 @@ export default function AdminPhoneManagement() {
     setRefreshing(false);
   }, []);
 
+  const toggleLanguage = () => { handleLanguageToggle(i18n, t, userId); };
 
-  const toggleLanguage = () => {
-    handleLanguageToggle(i18n, t, userId);
-  };
-  
   const applyOfflineFilters = (allPhones: any[]) => {
     let result = [...allPhones];
-
-    // 1. Search
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(p =>
-        p.name?.toLowerCase().includes(q) ||
-        p.id?.toLowerCase().includes(q)
+        p.name?.toLowerCase().includes(q) || p.id?.toLowerCase().includes(q)
       );
     }
-
-    // 2. Brand filter
     if (selectedBrands.length > 0) {
       result = result.filter(p => selectedBrands.includes(p.brandId));
     }
-
-    // 3. Sort
     const dir = sortOrder === 'desc' ? -1 : 1;
     if (sortType === 'DATE') {
-      result.sort((a, b) =>
-        dir * (new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime())
-      );
+      result.sort((a, b) => dir * (new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime()));
     } else {
       result.sort((a, b) => {
         const brandCompare = (a.brand || '').localeCompare(b.brand || '') * dir;
@@ -127,25 +104,20 @@ export default function AdminPhoneManagement() {
         return (a.id || '').localeCompare(b.id || '') * dir;
       });
     }
-
     return result;
   };
 
   const fetchPhones = async (forceRefresh = false) => {
     if (!forceRefresh) setLoading(true);
     setConnectionError(false);
-
     try {
       const brandQuery = selectedBrands.length === 0 ? 'ALL' : selectedBrands.join(',');
       const url = `${API_URL}/phones?brands=${brandQuery}&sortType=${sortType}&sortOrder=${sortOrder}&search=${search}`;
-      
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setPhones(data);
         await AsyncStorage.setItem(CACHE_ADMIN_PHONES, JSON.stringify(data));
-
-        // Always save the full unfiltered list separately for offline filtering
         if (selectedBrands.length === 0 && !search) {
           await AsyncStorage.setItem(CACHE_ADMIN_FULL, JSON.stringify(data));
         }
@@ -153,13 +125,10 @@ export default function AdminPhoneManagement() {
         throw new Error("Downstream connection failed");
       }
     } catch (error) {
-      // Try filtered cache first, then fall back to full cache with client-side filtering
       const filteredCached = await AsyncStorage.getItem(CACHE_ADMIN_PHONES);
       const fullCached = await AsyncStorage.getItem(CACHE_ADMIN_FULL);
-
       if (fullCached) {
-        const full = JSON.parse(fullCached);
-        setPhones(applyOfflineFilters(full));
+        setPhones(applyOfflineFilters(JSON.parse(fullCached)));
       } else if (filteredCached) {
         setPhones(JSON.parse(filteredCached));
       } else {
@@ -171,73 +140,41 @@ export default function AdminPhoneManagement() {
     }
   };
 
-  useEffect(() => {
-    fetchPhones();
-  }, [selectedBrands, sortType, sortOrder, search]);
+  useEffect(() => { fetchPhones(); }, [selectedBrands, sortType, sortOrder, search]);
+  useFocusEffect(useCallback(() => { setSearch(''); }, []));
 
-  useFocusEffect(
-    useCallback(() => {
-      setSearch(''); // Your existing search reset
-    }, [])
-  );
-
-  // --- NEW: MODAL HANDLERS ---
   const openAddModal = () => {
     setIsEditing(false);
-    // Default to the first brand ID available
-    setFormData({ 
-      id: '', 
-      name: '', 
-      brandId: availableBrands[0]?.id || null, 
-      price: '' 
-    });
+    setFormData({ id: '', name: '', brandId: availableBrands[0]?.id || null, price: '' });
     setIsModalVisible(true);
   };
 
   const openEditModal = (phone: any) => {
     setIsEditing(true);
-    // Find the ID of the brand based on the name from the phone object
     const brandObj = availableBrands.find(b => b.name === phone.brand);
-    setFormData({ 
-      id: phone.id, 
-      name: phone.name, 
-      brandId: brandObj ? brandObj.id : null, 
-      price: phone.price.toString() 
-    });
+    setFormData({ id: phone.id, name: phone.name, brandId: brandObj ? brandObj.id : null, price: phone.price.toString() });
     setIsModalVisible(true);
   };
 
   const handleSave = async () => {
     const { id, name, price, brandId } = formData;
-    
-    // 1. Deep Validation
     if (!id.trim() || !name.trim() || !price || !brandId) {
       Alert.alert(t('error'), t('fill_all_fields'));
       return;
     }
-
     const numericPrice = parseFloat(price);
     if (isNaN(numericPrice) || numericPrice <= 0) {
-      Alert.alert(t('error'), t('invalid_price_msg')); // "Please enter a valid positive price"
+      Alert.alert(t('error'), t('invalid_price_msg'));
       return;
     }
-
     try {
       const method = isEditing ? 'PUT' : 'POST';
       const endpoint = isEditing ? `${API_URL}/phones/${id}` : `${API_URL}/phones`;
-      
       const response = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ...formData, 
-          id: id.trim().toUpperCase(),
-          name: name.trim(),
-          price: numericPrice,
-          userId: Number(userId)
-        })
+        body: JSON.stringify({ ...formData, id: id.trim().toUpperCase(), name: name.trim(), price: numericPrice, userId: Number(userId) })
       });
-
       if (response.ok) {
         setIsModalVisible(false);
         fetchPhones();
@@ -252,10 +189,7 @@ export default function AdminPhoneManagement() {
   };
 
   const toggleBrand = (id: number | 'ALL') => {
-    if (id === 'ALL') {
-      setSelectedBrands([]);
-      return;
-    }
+    if (id === 'ALL') { setSelectedBrands([]); return; }
     if (selectedBrands.includes(id)) {
       setSelectedBrands(selectedBrands.filter(b => b !== id));
     } else {
@@ -266,113 +200,60 @@ export default function AdminPhoneManagement() {
   const handleDelete = (id: string) => {
     Alert.alert(t('system_delete'), `${t('confirm_removal')}: ${id}?`, [
       { text: t('cancel'), style: "cancel" },
-      { 
-        text: t('delete'), 
-        style: "destructive", 
-        onPress: async () => {
+      { text: t('delete'), style: "destructive", onPress: async () => {
           try {
-            const res = await fetch(`${API_URL}/phones/${id}`, { 
+            const res = await fetch(`${API_URL}/phones/${id}`, {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: Number(userId) }) 
+              body: JSON.stringify({ userId: Number(userId) })
             });
-            if (res.ok) {
-              fetchPhones(true);
-            } else {
-              Alert.alert(t('error'), t('connection_error'));
-            }
-          } catch (e) {
-            Alert.alert(t('error'), t('connection_error'));
-          }
-        } 
+            if (res.ok) { fetchPhones(true); }
+            else { Alert.alert(t('error'), t('connection_error')); }
+          } catch (e) { Alert.alert(t('error'), t('connection_error')); }
+        }
       }
     ]);
   };
 
-  
   const handleDeleteBrand = async (id: number) => {
-    // 1. CONFIRMATION ALERT
-    Alert.alert(
-      t('system_delete'), 
-      t('delete_brand_msg'), 
-      [
-        { text: t('cancel'), style: 'cancel' },
-        { 
-          text: t('delete'), 
-          style: 'destructive', 
-          onPress: async () => {
-            try {
-              const res = await fetch(`${API_URL}/phones/brands/${id}`, { 
-                method: 'DELETE' 
-              });
-
-              if (res.ok) {
-                // 2. SUCCESS: Remove from local state immediately
-                setAvailableBrands(prev => prev.filter(b => b.id !== id));
-                
-                // 3. CLEANUP: If the user was editing THIS brand, reset the form
-                if (brandForm.id === id) {
-                  setBrandForm({ id: null, name: '' });
-                }
-              } else {
-                // 4. DATABASE PROTECTION: 
-                // Usually fails if phones are still linked to this brandId
-                const errData = await res.json();
-                Alert.alert(t('error'), t('brand_in_use'));
-              }
-            } catch (e) {
-              Alert.alert(t('error'), t('connection_error'));
+    Alert.alert(t('system_delete'), t('delete_brand_msg'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('delete'), style: 'destructive', onPress: async () => {
+          try {
+            const res = await fetch(`${API_URL}/phones/brands/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+              setAvailableBrands(prev => prev.filter(b => b.id !== id));
+              if (brandForm.id === id) setBrandForm({ id: null, name: '' });
+            } else {
+              Alert.alert(t('error'), t('brand_in_use'));
             }
-          } 
+          } catch (e) { Alert.alert(t('error'), t('connection_error')); }
         }
-      ]
-    );
+      }
+    ]);
   };
 
   const handleSaveBrand = async () => {
     const trimmedName = brandForm.name.trim().toUpperCase();
-
-    // 1. EMPTY INPUT CHECK
-    if (!trimmedName) {
-      Alert.alert(t('error'), t('brand_name_required'));
-      return;
-    }
-
-    // 2. DUPLICATE CHECK (Local check before hitting server)
-    const exists = availableBrands.some(
-      (b) => b.name === trimmedName && b.id !== brandForm.id
-    );
-    if (exists) {
-      Alert.alert(t('error'), t('brand_exists'));
-      return;
-    }
-
+    if (!trimmedName) { Alert.alert(t('error'), t('brand_name_required')); return; }
+    const exists = availableBrands.some(b => b.name === trimmedName && b.id !== brandForm.id);
+    if (exists) { Alert.alert(t('error'), t('brand_exists')); return; }
     setIsSavingBrand(true);
-    const isEditing = brandForm.id !== null;
-    const url = isEditing 
-      ? `${API_URL}/phones/brands/${brandForm.id}` 
-      : `${API_URL}/phones/brands`;
-
+    const isEdit = brandForm.id !== null;
+    const url = isEdit ? `${API_URL}/phones/brands/${brandForm.id}` : `${API_URL}/phones/brands`;
     try {
       const res = await fetch(url, {
-        method: isEditing ? 'PUT' : 'POST',
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmedName })
       });
-
       const data = await res.json();
-
       if (res.ok) {
         setBrandForm({ id: null, name: '' });
-        // Refresh the local list
         const response = await fetch(`${API_URL}/phones/brands`);
         const updatedData = await response.json();
         setAvailableBrands(updatedData);
-        
-        // Optional: Success message
-        // Alert.alert(t('success'), isEditing ? t('brand_updated') : t('brand_added'));
       } else {
-        // 3. SERVER-SIDE ERROR (e.g., Database unique constraint failed)
         Alert.alert(t('error'), data.message || t('action_failed'));
       }
     } catch (e) {
@@ -383,68 +264,109 @@ export default function AdminPhoneManagement() {
   };
 
   useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', (e: KeyboardEvent) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
+    const showSub = Keyboard.addListener('keyboardDidShow', (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
   return (
     <View className="flex-1 bg-slate-900">
-      
-      {/* --- CONSOLE HEADER --- */}
-      <View className="pt-14 px-6 pb-8 bg-slate-900">
-        <View className="absolute top-14 right-6 flex-row items-center gap-x-3">
-          {/* Notification Bell */}
-          <TouchableOpacity 
-            onPress={() => router.push({ pathname: '/(admin)/notifications', params: { userId } })}
-            className="p-2.5 bg-slate-800 rounded-xl border border-slate-700"
-          >
-            <Ionicons name="notifications" size={18} color="#fbbf24" />
-            {unreadCount > 0 && (
-              <View className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-slate-900" />
-            )}
-          </TouchableOpacity>
 
-          {/* Language Toggle */}
-          <TouchableOpacity 
-            onPress={toggleLanguage}
-            className="flex-row items-center bg-slate-800 px-3 py-2 rounded-xl border border-slate-700"
-          >
-            <Ionicons name="globe-outline" size={18} color="#fbbf24" />
-            <Text className="text-white font-black text-[10px] ml-2 uppercase">
-              {i18n.language === 'ar' ? 'EN' : 'AR'}
-            </Text>
-          </TouchableOpacity>
+      {/* --- HEADER --- */}
+      <View className="pt-14 px-5 pb-3 bg-slate-900">
 
-          {/* Logout Button */}
-          <TouchableOpacity 
-            onPress={confirmSignOut}
-            className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20"
-          >
-            <Ionicons name="log-out-outline" size={18} color="#ef4444" />
-          </TouchableOpacity>
-        </View>
-        <View className="flex-row justify-between items-center mb-6">
+        {/* ROW 1: Title + Actions */}
+        <View className="flex-row justify-between items-center mb-3">
           <View>
-            <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">{t('system_admin')}</Text>
-            <Text className="text-3xl font-black text-white tracking-tighter">{t('inventory')}</Text>
+            <Text className="text-amber-500 text-[9px] font-black uppercase tracking-[3px]">{t('system_admin')}</Text>
+            <Text className="text-2xl font-black text-white">{t('price_list')}</Text>
+          </View>
+
+          <View className="flex-row items-center gap-x-2">
+
+            {/* Add Phone */}
+            <TouchableOpacity
+              onPress={openAddModal}
+              className="p-2 bg-amber-500 rounded-xl"
+            >
+              <Ionicons name="add" size={18} color="#0f172a" />
+            </TouchableOpacity>
+
+            {/* Manage Brands */}
+            <TouchableOpacity
+              onPress={() => setIsBrandModalVisible(true)}
+              className="p-2 bg-slate-800 rounded-xl border border-slate-700"
+            >
+              <Ionicons name="settings-sharp" size={16} color="#fbbf24" />
+            </TouchableOpacity>
+
+
+            {/* Notification Bell */}
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/(admin)/notifications', params: { userId } })}
+              className="p-2 bg-slate-800 rounded-xl border border-slate-700"
+            >
+              <Ionicons name="notifications" size={16} color="#fbbf24" />
+              {unreadCount > 0 && (
+                <View className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-slate-900" />
+              )}
+            </TouchableOpacity>
+
+            {/* Language Toggle */}
+            <TouchableOpacity
+              onPress={toggleLanguage}
+              className="flex-row items-center bg-slate-800 px-2.5 py-2 rounded-xl border border-slate-700"
+            >
+              <Ionicons name="globe-outline" size={16} color="#fbbf24" />
+              <Text className="text-white font-black text-[9px] ml-1.5 uppercase">
+                {i18n.language === 'ar' ? 'EN' : 'AR'}
+              </Text>
+            </TouchableOpacity>
+
             
+
+            {/* Logout */}
+            <TouchableOpacity
+              onPress={confirmSignOut}
+              className="p-2 bg-red-500/10 rounded-xl border border-red-500/20"
+            >
+              <Ionicons name="log-out-outline" size={16} color="#ef4444" />
+            </TouchableOpacity>
           </View>
         </View>
-        
-        {/* Integrated Search */}
-        <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-14 mb-2 border border-slate-700 shadow-inner">
-          <Ionicons name="search" size={20} color="#64748b" />
-          <TextInput 
-            placeholder={t('search_dot')} 
+
+        {/* ROW 2: Brand Filter — ALL fixed, brands scrollable */}
+        <View className="flex-row items-center mb-2">
+          {/* Fixed ALL button */}
+          <TouchableOpacity
+            onPress={() => toggleBrand('ALL')}
+            className={`px-4 py-1.5 rounded-xl border-2 ${selectedBrands.length === 0 ? 'bg-amber-500 border-amber-400' : 'bg-transparent border-slate-700'}`}
+          >
+            <Text className={`font-black text-[10px] ${selectedBrands.length === 0 ? 'text-slate-900' : 'text-slate-500'}`}>ALL</Text>
+          </TouchableOpacity>
+
+          {/* Separator */}
+          <View className="w-[1px] h-5 bg-slate-700 mx-2" />
+
+          {/* Scrollable brands */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
+            {availableBrands.map((brand) => (
+              <TouchableOpacity
+                key={brand.id}
+                onPress={() => toggleBrand(brand.id)}
+                className={`px-4 py-1.5 rounded-xl mr-2 border-2 ${selectedBrands.includes(brand.id) ? 'bg-amber-500 border-amber-400' : 'bg-transparent border-slate-700'}`}
+              >
+                <Text className={`font-black text-[10px] ${selectedBrands.includes(brand.id) ? 'text-slate-900' : 'text-slate-500'}`}>{brand.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* ROW 3: Search */}
+        <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-12 border border-slate-700">
+          <Ionicons name="search" size={18} color="#64748b" />
+          <TextInput
+            placeholder={t('search_dot')}
             placeholderTextColor="#475569"
             className="flex-1 ml-3 text-white font-bold"
             value={search}
@@ -452,63 +374,26 @@ export default function AdminPhoneManagement() {
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={20} color="#64748b" />
+              <Ionicons name="close-circle" size={18} color="#64748b" />
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Brand Scrollbox */}
-        <View className="mb-1">
-          <View className="flex-row justify-between items-end mb-3 mt-2">
-            <View>
-              <Text className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 ml-1">
-                {t('filter_source')}
-              </Text>
-            </View>
-            
-            <TouchableOpacity 
-              onPress={() => setIsBrandModalVisible(true)}
-              className="flex-row items-center bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700"
-            >
-              <Ionicons name="settings-sharp" size={12} color="#fbbf24" />
-              <Text className="text-amber-500 font-black text-[9px] ml-2 uppercase">
-                {t('manage_brands')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <TouchableOpacity 
-              onPress={() => toggleBrand('ALL')}
-              className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.length === 0 ? 'bg-amber-500 border-amber-400' : 'bg-transparent border-slate-800'}`}
-            >
-              <Text className={`font-black text-[11px] ${selectedBrands.length === 0 ? 'text-slate-900' : 'text-slate-500'}`}>ALL</Text>
-            </TouchableOpacity>
-            {availableBrands.map((brand) => (
-              <TouchableOpacity 
-                key={brand.id}
-                onPress={() => toggleBrand(brand.id)}
-                className={`px-6 py-2 rounded-xl mr-3 border-2 ${selectedBrands.includes(brand.id) ? 'bg-amber-500 border-amber-400' : 'bg-transparent border-slate-800'}`}
-              >
-                <Text className={`font-black text-[11px] ${selectedBrands.includes(brand.id) ? 'text-slate-900' : 'text-slate-500'}`}>{brand.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
       </View>
 
-      {/* --- THE MAIN DATA TERMINAL --- */}
-      <View className="flex-1 bg-slate-50 rounded-t-[45px] shadow-2xl border-t border-slate-200">
-        <View className="flex-row justify-between items-center px-8 py-6">
+      {/* --- MAIN LIST AREA --- */}
+      <View className="flex-1 bg-slate-50 rounded-t-[36px] border-t border-slate-200">
+
+        {/* List Header: counts + sort controls */}
+        <View className="flex-row justify-between items-center px-6 py-4">
           <View>
             <Text className="text-xs font-black text-slate-400 uppercase tracking-[2px]">
               {t('active_records')}
             </Text>
-            {/* NEW LOGS BUTTON */}
-            <TouchableOpacity 
-              onPress={() => router.push({ pathname: '/(admin)/changes', params: { userId } })} 
-              className="flex-row items-center mt-1"
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/(admin)/changes', params: { userId } })}
+              className="flex-row items-center mt-0.5"
             >
-              <Ionicons name="list-circle-outline" size={14} color="#64748b" />
+              <Ionicons name="list-circle-outline" size={13} color="#64748b" />
               <Text className="text-slate-500 font-bold text-[10px] ml-1 border-b border-slate-300">
                 {t('view_system_logs')}
               </Text>
@@ -516,216 +401,178 @@ export default function AdminPhoneManagement() {
           </View>
 
           <View className="flex-row gap-x-2">
-            {/* TOGGLE 1: TYPE (ID vs DATE) */}
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setSortType(prev => prev === 'ID' ? 'DATE' : 'ID')}
               className="flex-row items-center bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200"
             >
               <Ionicons name={sortType === 'ID' ? "text" : "calendar"} size={12} color="#64748b" />
-              <Text className="text-slate-600 font-bold text-[9px] uppercase ml-2">
+              <Text className="text-slate-600 font-bold text-[9px] uppercase ml-1.5">
                 {sortType === 'ID' ? t('sort_ref') : t('sort_date')}
               </Text>
             </TouchableOpacity>
-
-            {/* TOGGLE 2: DIRECTION (ASC vs DESC) */}
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
               className="bg-slate-100 p-1.5 rounded-lg border border-slate-200"
             >
-              <Ionicons 
-                name={sortOrder === 'asc' ? "arrow-up" : "arrow-down"} 
-                size={12} 
-                color="#3b82f6" 
-              />
+              <Ionicons name={sortOrder === 'asc' ? "arrow-up" : "arrow-down"} size={12} color="#3b82f6" />
             </TouchableOpacity>
           </View>
         </View>
 
         <FlatList
           data={phones}
-          contentContainerStyle={{ paddingBottom: 120 }} // Slightly more breathing room for the floating action button
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
-          }
-          renderItem={({ item, index } : any) => (
-            <View className="ml-2 mr-6 mb-2 flex-row items-center">
-              <Text className="text-[10px] font-black text-slate-400 w-6 text-right mr-2">{index + 1}</Text>
-              <TouchableOpacity 
+          contentContainerStyle={{ paddingBottom: 30 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}
+          renderItem={({ item, index }: any) => (
+            <View className="ml-2 mr-5 mb-1.5 flex-row items-center">
+              {/* Index Number */}
+              <Text className="text-[10px] font-black text-slate-400 w-6 text-right mr-1.5">{index + 1}</Text>
+              
+              {/* Main Card Element */}
+              <TouchableOpacity
                 onPress={() => setSelectedPhone(item)}
                 activeOpacity={0.7}
-                className="flex-1 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm flex-row justify-between items-center"
+                className="flex-1 px-3 py-2 bg-white rounded-xl border border-slate-100 shadow-sm flex-row justify-between items-center"
               >
-             {/* LEFT COLUMN: Main Specs */}
-              <View className="flex-1 min-w-0 pr-2">
-                {/* Reference ID isolated cleanly at the top */}
-                <View className="flex-row items-baseline mb-0.5">
-                  <Text className="text-[9px] font-black text-slate-900 uppercase">
-                    {t('ref') + ":"}
-                  </Text>
-                  <Text className="text-[9px] font-black text-amber-600 tracking-tighter">
-                    {item.id}
-                  </Text>
-                </View>
-
-                {/* Model Name gets its own line, scaling cleanly */}
-                <Text className="text-base font-black text-slate-900 leading-tight" numberOfLines={1}>
-                  {item.name}
-                </Text>
-                
-                {/* Brand Tag stacked right below the name alone */}
-                <View className="flex-row mt-1">
-                  <View className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                    <Text className="text-[8px] text-slate-500 font-black uppercase tracking-wider">
-                      {item.brand + " "}
+                {/* --- LEFT SECTION: INFO --- */}
+                <View className="flex-1 min-w-0 pr-2">
+                  {/* TOP ROW: Fully Inline Nested Reference and Brand */}
+                  <View className="flex-row items-center mb-0.5">
+                    <Text className="text-[8px] font-black text-slate-400 uppercase">
+                      {t('ref') + ": "}
+                      <Text className="text-amber-600 tracking-tighter">
+                        {item.id}
+                      </Text>
+                      
+                      {/* Inline dot separator */}
+                      <Text className="text-slate-300 px-1 font-normal">  •  </Text>
+                      
+                      {/* Inline Brand Text with matching layout properties */}
+                      <Text className="text-[7px] text-slate-500 font-black tracking-wider bg-slate-100 px-1 rounded">
+                        {" "}{item.brand}{" "}
+                      </Text>
                     </Text>
                   </View>
-                </View>
-              </View>
 
-              {/* RIGHT COLUMN: Pricing & Action Tools */}
-              <View className="flex-row items-center space-x-3 ml-2">
-                {/* Compact Price View */}
-                <View className="items-end">
-                  <View className="flex-row items-baseline">
-                    <Text className="text-lg font-black text-slate-900">{item.price}</Text>
-                    <Text className="text-[9px] font-bold text-slate-400 ml-0.5">{t('currency')}</Text>
+                  {/* DEVICE NAME */}
+                  <Text className="text-sm font-black text-slate-900 leading-tight" numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                </View>
+
+                {/* --- RIGHT SECTION: PRICE & CONTROLS --- */}
+                <View className="flex-row items-center gap-x-1.5 shrink-0 ml-2">
+                  {/* Compact Price Block */}
+                  <View className="bg-slate-50 px-2 py-1 rounded-xl border border-slate-100">
+                    <View className="flex-row items-baseline">
+                      <Text className="text-sm font-black text-slate-900">{item.price}</Text>
+                      <Text className="text-[7px] font-black text-slate-400 ml-0.5">{t('currency')}</Text>
+                    </View>
+                  </View>
+
+                  {/* Control Buttons (Pencil + Trash stacked side-by-side cleanly) */}
+                  <View className="flex-row gap-x-1">
+                    <TouchableOpacity 
+                      onPress={() => openEditModal(item)} 
+                      className="p-2 bg-slate-900 rounded-xl shadow-sm"
+                    >
+                      <Ionicons name="pencil" size={11} color="#fbbf24" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => handleDelete(item.id)} 
+                      className="p-2 bg-red-50 rounded-xl border border-red-100"
+                    >
+                      <Ionicons name="trash" size={11} color="#ef4444" />
+                    </TouchableOpacity>
                   </View>
                 </View>
-
-                {/* Inline, ultra-compact action icon buttons */}
-                <View className="flex-row space-x-1 ml-2">
-                  <TouchableOpacity 
-                    onPress={() => openEditModal(item)} 
-                    className="p-2 bg-slate-900 rounded-lg shadow-sm"
-                  >
-                    <Ionicons name="pencil" size={12} color="#fbbf24" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => handleDelete(item.id)} 
-                    className="p-2 bg-red-50 rounded-lg border border-red-100"
-                  >
-                    <Ionicons name="trash" size={12} color="#ef4444" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
             </View>
           )}
           ListEmptyComponent={
-            loading ? <ActivityIndicator size="large" color="#0f172a" className="mt-20" /> : 
-            <View className="items-center mt-20 px-10">
-              <Ionicons 
-                name={search.length > 0 ? "search-outline" : "file-tray-outline"}
-                size={40} 
-                color="#cbd5e1" />
-              <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
-                {search.length > 0 ? `${t('no_results')} "${search}"` : t('no_inventory_found')}
-              </Text>
-            </View>
+            loading ? (
+              <ActivityIndicator size="large" color="#0f172a" style={{ marginTop: 80 }} />
+            ) : (
+              <View className="items-center mt-20 px-10">
+                <Ionicons name={search.length > 0 ? "search-outline" : "file-tray-outline"} size={40} color="#cbd5e1" />
+                <Text className="text-slate-400 font-black text-center mt-4 text-[11px] uppercase tracking-widest">
+                  {search.length > 0 ? `${t('no_results')} "${search}"` : t('no_inventory_found')}
+                </Text>
+              </View>
+            )
           }
         />
-        {/* --- FIXED FLOATING ACTION BAR --- */}
-        <View className="absolute bottom-6 left-6 right-6">
-          <TouchableOpacity 
-            onPress={openAddModal} // OPEN ADD
-            className="bg-slate-900 h-16 rounded-[24px] flex-row justify-center items-center shadow-2xl border-t border-slate-800"
-            style={{ elevation: 10 }}
-          >
-            <View className="bg-amber-500 rounded-full p-1 mr-3">
-              <Ionicons name="add" size={20} color="#0f172a" />
-            </View>
-            <Text
-            numberOfLines={1} 
-            adjustsFontSizeToFit 
-            minimumFontScale={0.8} 
-            className="text-white font-black text-base tracking-tight uppercase">{t('enroll_new_device')}</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
-      {/* --- ADD / EDIT SYSTEM MODAL --- */}
+      {/* --- ADD / EDIT MODAL --- */}
       <Modal visible={isModalVisible} animationType="slide" transparent={true} statusBarTranslucent={true}>
-        <View 
-        className="flex-1 justify-end bg-black/60">
-          <View 
+        <View className="flex-1 justify-end bg-black/60">
+          <View
             className="bg-slate-900 rounded-t-[45px] p-8 border-t-2 border-amber-500/30"
-            style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 }}
+            style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 + insets.bottom }}
           >
             <View className="w-12 h-1 bg-slate-700 rounded-full self-center mb-6" />
-            
             <Text className="text-amber-500 font-black text-[10px] uppercase tracking-[3px] mb-2">
-                {isEditing ? t('system_update') : t('new_entry')}
+              {isEditing ? t('system_update') : t('new_entry')}
             </Text>
             <Text className="text-3xl font-black text-white mb-8 tracking-tighter">
-                {isEditing ? t('edit_specs') : t('register_device')}
+              {isEditing ? t('edit_specs') : t('register_device')}
             </Text>
-
             <View className="gap-y-4">
               <View>
                 <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('device_ref_id')}</Text>
-                <TextInput 
-                  editable={!isEditing} 
-                  placeholder={t('device_id_placeholder')} 
-                  placeholderTextColor="#475569" 
-                  value={formData.id} 
-                  onChangeText={(t) => setFormData({...formData, id: t})} 
-                  className={`bg-slate-800 text-white p-4 rounded-2xl border ${isEditing ? 'border-slate-700 text-slate-500' : 'border-slate-700'}`} 
+                <TextInput
+                  editable={!isEditing}
+                  placeholder={t('device_id_placeholder')}
+                  placeholderTextColor="#475569"
+                  value={formData.id}
+                  onChangeText={(v) => setFormData({...formData, id: v})}
+                  className={`bg-slate-800 text-white p-4 rounded-2xl border ${isEditing ? 'border-slate-700 text-slate-500' : 'border-slate-700'}`}
                 />
               </View>
-
               <View>
                 <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('model_designation')}</Text>
-                <TextInput 
-                  placeholder={t('model_name_placeholder')} 
-                  placeholderTextColor="#475569" 
-                  value={formData.name} 
-                  onChangeText={(t) => setFormData({...formData, name: t})} 
-                  className="bg-slate-800 text-white p-4 rounded-2xl border border-slate-700" 
+                <TextInput
+                  placeholder={t('model_name_placeholder')}
+                  placeholderTextColor="#475569"
+                  value={formData.name}
+                  onChangeText={(v) => setFormData({...formData, name: v})}
+                  className="bg-slate-800 text-white p-4 rounded-2xl border border-slate-700"
                 />
               </View>
-              
               <View>
                 <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('manufacturer')}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-1">
-                    {availableBrands.map(b => (
-                    <TouchableOpacity 
-                        key={b.id} 
-                        onPress={() => setFormData({...formData, brandId: b.id})} 
-                        className={`mr-2 px-5 py-2.5 rounded-xl border-2 ${formData.brandId === b.id ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-slate-700'}`}
+                  {availableBrands.map(b => (
+                    <TouchableOpacity
+                      key={b.id}
+                      onPress={() => setFormData({...formData, brandId: b.id})}
+                      className={`mr-2 px-5 py-2.5 rounded-xl border-2 ${formData.brandId === b.id ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-slate-700'}`}
                     >
-                        <Text className={`font-black text-[10px] ${formData.brandId === b.id ? 'text-slate-900' : 'text-slate-400'}`}>{b.name}</Text>
+                      <Text className={`font-black text-[10px] ${formData.brandId === b.id ? 'text-slate-900' : 'text-slate-400'}`}>{b.name}</Text>
                     </TouchableOpacity>
-                    ))}
+                  ))}
                 </ScrollView>
-            </View>
-
+              </View>
               <View>
                 <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('valuation_sar')}</Text>
-                <TextInput 
-                  placeholder={t('price')} 
-                  keyboardType="numeric" 
-                  placeholderTextColor="#475569" 
-                  value={formData.price} 
-                  onChangeText={(t) => setFormData({...formData, price: t})} 
-                  className="bg-slate-800 text-white p-4 rounded-2xl border border-slate-700 font-bold" 
+                <TextInput
+                  placeholder={t('price')}
+                  keyboardType="numeric"
+                  placeholderTextColor="#475569"
+                  value={formData.price}
+                  onChangeText={(v) => setFormData({...formData, price: v})}
+                  className="bg-slate-800 text-white p-4 rounded-2xl border border-slate-700 font-bold"
                 />
               </View>
             </View>
-
             <View className="flex-row mt-10 gap-x-3">
-              <TouchableOpacity 
-                onPress={() => setIsModalVisible(false)} 
-                className="flex-1 bg-slate-800 h-16 rounded-[24px] justify-center items-center"
-              >
-                <Text className="text-slate-400 font-black text-xs  uppercase flex-shrink: 0">{t('discard')}</Text> 
+              <TouchableOpacity onPress={() => setIsModalVisible(false)} className="flex-1 bg-slate-800 h-16 rounded-[24px] justify-center items-center">
+                <Text className="text-slate-400 font-black text-xs uppercase">{t('discard')}</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                onPress={handleSave} 
-                className="flex-[2] bg-amber-500 h-16 rounded-[24px] justify-center items-center shadow-lg shadow-amber-500/20"
-              >
+              <TouchableOpacity onPress={handleSave} className="flex-[2] bg-amber-500 h-16 rounded-[24px] justify-center items-center shadow-lg shadow-amber-500/20">
                 <Text className="text-slate-900 font-black text-xs tracking-widest uppercase">
-                    {isEditing ? t('apply_changes') : t('confirm_enrollment')}
+                  {isEditing ? t('apply_changes') : t('confirm_enrollment')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -733,8 +580,7 @@ export default function AdminPhoneManagement() {
         </View>
       </Modal>
 
-      
-      {/* Brand Management Modal */}
+      {/* --- BRAND MANAGEMENT MODAL --- */}
       <Modal visible={isBrandModalVisible} animationType="fade" transparent={true}>
         <View className="flex-1 justify-center items-center bg-black/80 px-6">
           <View className="bg-slate-900 w-full rounded-[35px] p-8 border border-slate-800">
@@ -742,24 +588,19 @@ export default function AdminPhoneManagement() {
               <Text className="text-xl font-black text-white">
                 {brandForm.id ? t('edit_brand') : t('manage_brands')}
               </Text>
-              <TouchableOpacity onPress={() => {
-                setIsBrandModalVisible(false);
-                setBrandForm({ id: null, name: '' });
-              }}>
+              <TouchableOpacity onPress={() => { setIsBrandModalVisible(false); setBrandForm({ id: null, name: '' }); }}>
                 <Ionicons name="close" size={24} color="#64748b" />
               </TouchableOpacity>
             </View>
-
-            {/* Input Field (Handles both Add and Edit) */}
             <View className="flex-row mb-6 gap-x-2">
-              <TextInput 
+              <TextInput
                 className="flex-1 bg-slate-800 text-white p-4 rounded-2xl border border-slate-700 font-bold"
                 placeholder={t('brand_name')}
                 placeholderTextColor="#475569"
                 value={brandForm.name}
                 onChangeText={(val) => setBrandForm({...brandForm, name: val})}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleSaveBrand}
                 disabled={isSavingBrand}
                 className={`w-14 rounded-2xl items-center justify-center ${brandForm.id ? 'bg-blue-500' : 'bg-amber-500'}`}
@@ -771,21 +612,17 @@ export default function AdminPhoneManagement() {
                 )}
               </TouchableOpacity>
             </View>
-
-            {/* List of Existing Brands */}
             <View className="max-h-60">
-              <FlatList 
+              <FlatList
                 data={availableBrands}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <View className="flex-row justify-between items-center py-3 border-b border-slate-800">
                     <Text className="text-slate-300 font-bold">{item.name}</Text>
                     <View className="flex-row gap-x-4">
-                      {/* EDIT BUTTON */}
                       <TouchableOpacity onPress={() => setBrandForm({ id: item.id, name: item.name })}>
                         <Ionicons name="pencil-outline" size={18} color="#3b82f6" />
                       </TouchableOpacity>
-                      {/* DELETE BUTTON */}
                       <TouchableOpacity onPress={() => handleDeleteBrand(item.id)}>
                         <Ionicons name="trash-outline" size={18} color="#ef4444" />
                       </TouchableOpacity>
@@ -800,30 +637,18 @@ export default function AdminPhoneManagement() {
 
       {/* --- PHONE DETAIL POPUP --- */}
       <Modal visible={!!selectedPhone} animationType="fade" transparent={true} onRequestClose={() => setSelectedPhone(null)}>
-        <TouchableOpacity 
-          className="flex-1 justify-center items-center bg-black/70 px-8"
-          activeOpacity={1}
-          onPress={() => setSelectedPhone(null)}
-        >
+        <TouchableOpacity className="flex-1 justify-center items-center bg-black/70 px-8" activeOpacity={1} onPress={() => setSelectedPhone(null)}>
           <TouchableOpacity activeOpacity={1} className="bg-white w-full rounded-[30px] p-6">
             <View className="flex-row justify-between items-start mb-4">
-              <View className={`px-3 py-1 rounded-full bg-slate-100`}>
-                <Text className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                  {selectedPhone?.brand}
-                </Text>
+              <View className="px-3 py-1 rounded-full bg-slate-100">
+                <Text className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{selectedPhone?.brand}</Text>
               </View>
               <TouchableOpacity onPress={() => setSelectedPhone(null)} className="p-1">
                 <Ionicons name="close-circle" size={22} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-
-            <Text className="text-[9px] font-black text-amber-600 uppercase mb-1">
-              {t('ref')}: {selectedPhone?.id}
-            </Text>
-            <Text className="text-xl font-black text-slate-900 leading-snug mb-6">
-              {selectedPhone?.name}
-            </Text>
-
+            <Text className="text-[9px] font-black text-amber-600 uppercase mb-1">{t('ref')}: {selectedPhone?.id}</Text>
+            <Text className="text-xl font-black text-slate-900 leading-snug mb-6">{selectedPhone?.name}</Text>
             <View className="flex-row justify-between items-center border-t border-slate-100 pt-4">
               <Text className="text-slate-400 text-[10px] font-black uppercase">{t('valuation_sar')}</Text>
               <View className="flex-row items-baseline">
@@ -834,8 +659,6 @@ export default function AdminPhoneManagement() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-
-
 
     </View>
   );

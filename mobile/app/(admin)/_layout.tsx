@@ -2,10 +2,12 @@ import { Redirect, Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useSession } from '../../context/SessionContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AdminLayout() {
   const {t} = useTranslation();  
   const { userRole, loading } = useSession();
+  const insets = useSafeAreaInsets();
 
   if (loading) return null;
 
@@ -16,18 +18,18 @@ export default function AdminLayout() {
   return (
     <Tabs screenOptions={{ 
       headerShown: false,
-      tabBarActiveTintColor: '#fbbf24', // Amber-400
-      tabBarInactiveTintColor: '#64748b', // Slate-500
+      tabBarActiveTintColor: '#fbbf24',
+      tabBarInactiveTintColor: '#64748b',
       tabBarStyle: { 
-        backgroundColor: '#0f172a', // Deep Navy (Slate-900)
+        backgroundColor: '#0f172a',
         borderTopWidth: 1,
-        borderTopColor: '#1e293b', // Slate-800
-        height: 70,
-        paddingBottom: 12,
-        paddingTop: 8
+        borderTopColor: '#1e293b',
+        height: 50 + insets.bottom,
+        paddingBottom: 12 + insets.bottom,
+        paddingTop: 2
       },
       tabBarLabelStyle: {
-        fontSize: 10,
+        fontSize: 8,
         fontWeight: '900',
         textTransform: 'uppercase',
         letterSpacing: 1

@@ -1,26 +1,27 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function UserLayout() {
-
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   
   return (
     <Tabs screenOptions={{ 
       headerShown: false,
-      tabBarActiveTintColor: '#3b82f6', // Blue-500 (Matches your Inventory theme)
-      tabBarInactiveTintColor: '#64748b', // Slate-500
+      tabBarActiveTintColor: '#3b82f6',
+      tabBarInactiveTintColor: '#64748b',
       tabBarStyle: { 
-        backgroundColor: '#f8fafc', // Light Slate (Matches User page background)
+        backgroundColor: '#f8fafc',
         borderTopWidth: 1,
-        borderTopColor: '#e2e8f0', // Slate-200
-        height: 70,
-        paddingBottom: 12,
-        paddingTop: 8
+        borderTopColor: '#e2e8f0',
+        height: 50 + insets.bottom,
+        paddingBottom: 12 + insets.bottom,
+        paddingTop: 2
       },
       tabBarLabelStyle: {
-        fontSize: 10,
+        fontSize: 8,
         fontWeight: '900',
         textTransform: 'uppercase',
         letterSpacing: 1
