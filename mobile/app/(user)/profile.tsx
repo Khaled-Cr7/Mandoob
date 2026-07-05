@@ -9,6 +9,7 @@ import { useSession } from '../../context/SessionContext';
 import { handleLanguageToggle } from '../../utils/language';
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ProfileAvatar = ({ avatarUri, fallbackUri, cacheKey }: { 
   avatarUri: string | null, 
@@ -48,6 +49,7 @@ export default function ProfileScreen() {
   const [cacheKey, setCacheKey] = useState(Date.now());
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const CACHE_PROFILE_KEY = `cache_profile_${userId}`;
+  const insets = useSafeAreaInsets();
 
   const { confirmSignOut } = useSession();
 
@@ -332,7 +334,7 @@ export default function ProfileScreen() {
       <Modal visible={passModalVisible} animationType="slide" transparent={true} statusBarTranslucent={true}>
          <View className="flex-1 justify-end bg-black/60"> 
           <View className="bg-white rounded-t-[50px] p-10 border-t border-slate-200"
-            style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 }}
+            style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 + insets.bottom }}
           >
             <View className="w-12 h-1.5 bg-slate-200 rounded-full self-center mb-8" />
             <Text className="text-3xl font-black text-slate-900 mb-2 tracking-tighter">{t('new_password')}</Text>
@@ -351,7 +353,7 @@ export default function ProfileScreen() {
 
       <Modal visible={uploadModalVisible} animationType="slide" transparent>
         <TouchableOpacity className="flex-1 bg-black/60 justify-end" onPress={() => setUploadModalVisible(false)}>
-          <View className="bg-white rounded-t-[40px] p-10 pb-16">
+          <View className="bg-white rounded-t-[40px] p-10 pb-16" style={{ paddingBottom: 64 + insets.bottom }}>
             <Text className="text-2xl font-black text-slate-900 mb-2">{t('change_picture')}</Text>
             <Text className="text-slate-400 text-xs font-bold mb-10 uppercase tracking-widest">{t('select_option')}</Text>
             <View className="flex-row gap-x-4">

@@ -32,9 +32,10 @@ export async function sendBroadcastNotification(log: any, excludeUserId?: number
         ? `تحديث السعر: ${log.modelName} أصبح ${log.newValue} ر.س`
         : `Price Update: ${log.modelName} is now ${log.newValue} SAR`;
     } else if (log.type === 'ADDED') {
+      const price = log.newValue ? (isArabic ? `${log.newValue} ر.س` : `${log.newValue} SAR`) : '';
       body = isArabic 
-        ? `هاتف جديد: ${log.modelName} متوفر الآن!` 
-        : `New Phone: ${log.modelName} is now available!`;
+        ? `هاتف جديد: ${log.modelName}${price ? ` - ${price}` : ''}` 
+        : `New Phone: ${log.modelName}${price ? ` - ${price}` : ''}`;
     }
 
     if (body) {

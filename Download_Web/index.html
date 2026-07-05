@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kunooz Mandoob</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      background: #0b0f19; /* Deep premium brand midnight background */
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: #141c2f; /* Perfectly matches the dark tones of the app logo structure */
+      border-radius: 28px; /* Matches squircle look of your icon app wrapper */
+      padding: 40px 32px;
+      max-width: 380px;
+      width: 90%;
+      text-align: center;
+      border: 1px solid #1e293b;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); /* Premium deep dark drop-shadow */
+    }
+
+    .logo {
+      width: 96px;
+      height: 96px;
+      background: #ffffff;
+      border-radius: 22px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    h1 { 
+      font-size: 26px; 
+      font-weight: 800; 
+      margin-bottom: 6px; 
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    .version { 
+      color: #475569; 
+      font-size: 11px; 
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 32px;
+    }
+
+    .download-btn {
+      display: block;
+      /* 💎 Gradient matches the premium sapphire blues inside your K logo icon */
+      background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 50%, #2563eb 100%);
+      color: white;
+      text-decoration: none;
+      padding: 16px 32px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      transition: all 0.2s ease-in-out;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+      filter: brightness(1.1);
+    }
+
+    .download-btn:active {
+      transform: translateY(0);
+    }
+
+    /* 🔔 Replaced the raw yellow text with a beautiful integrated notice box */
+    .alert-banner {
+      background: rgba(245, 158, 11, 0.08); 
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      flex-row: row;
+      align-items: flex-start;
+      gap: 10px;
+      text-align: left;
+    }
+
+    .alert-icon {
+      font-size: 14px;
+      margin-top: 1px;
+    }
+
+    .note {
+      color: #d97706; /* Highly readable amber text color built for dark mode layouts */
+      font-size: 11px;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <img src="logo.png" alt="Kunooz Mandoob Logo" />
+    </div>
+    
+    <h1>Kunooz Mandoob</h1>
+    <p class="version">Version 1.0.2 · Android</p>
+    
+    <a class="download-btn" href="https://download.rawrez.com/KunoozMandoob.apk" download>
+      Download App
+    </a>
+    
+    <div class="alert-banner">
+      <span class="alert-icon">⚠️</span>
+      <p class="note">
+        Please make sure to enable notification permissions for this app after installation to receive system updates instantly.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

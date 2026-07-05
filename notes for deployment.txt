@@ -1,6 +1,6 @@
-- users and admins page fix the handling of connection error for adding, editing or deleting.
--for device secure page instead of showing database connection issue, just show it in the list it self that there is a connection problem and try to refresh
-- handle connection error in system logs and handle publish notification button also.
-- fix the search function and filter for brands and filter for date etc, so it works with the cached data if there is no internet
-- record all system changes even phone deletion and put published, pending, or not published but for the deleted data just show not published right away.
-- think about adding notification editor where the admins can delete some notifications from users.
+- add the price of the new added phone in the notification
+- the brand filter (all) stays still when you scroll in brands.
+- handle navigation buttons in all pages
+- fix all the pages to use space better
+- when changing language leave the phone list same as it is.
+- add export to pdf and excel.

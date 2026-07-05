@@ -11,6 +11,7 @@ import * as Updates from 'expo-updates';
 import * as Application from 'expo-application';
 import { handleLanguageToggle } from '../../utils/language';
 import { useSession } from '../../context/SessionContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AdminManagement() {
   const { t } = useTranslation();
@@ -37,6 +38,7 @@ export default function AdminManagement() {
   const [connectionError, setConnectionError] = useState(false);
   const CACHE_ADMINS_KEY = 'cache_admins_list';
   const CACHE_ADMINS_FULL = 'cache_admins_full';
+  const insets = useSafeAreaInsets();
 
   const toggleLanguage = () => {
     handleLanguageToggle(i18n, t, userId);
@@ -237,37 +239,44 @@ export default function AdminManagement() {
 
   return (
     <View className="flex-1 bg-slate-900">
-      <View className="pt-14 px-6 pb-8 bg-slate-900">
-        <View className="absolute top-14 right-6 flex-row items-center space-x-3 gap-x-1.5">
-          {/* Language Toggle */}
-          <TouchableOpacity 
-            onPress={toggleLanguage}
-            className="flex-row items-center bg-slate-800 px-3 py-2 rounded-xl border border-slate-700"
-          >
-            <Ionicons name="globe-outline" size={18} color="#fbbf24" />
-            <Text className="text-white font-black text-[10px] ml-2 uppercase">
-              {i18n.language === 'ar' ? 'EN' : 'AR'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Logout Button */}
-          <TouchableOpacity 
-            onPress={confirmSignOut}
-            className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20"
-          >
-            <Ionicons name="log-out-outline" size={18} color="#ef4444" />
-          </TouchableOpacity>
-        </View>
-        <View className="flex-row justify-between items-center mb-6">
+      <View className="pt-14 px-5 pb-3 bg-slate-900">
+        <View className="flex-row justify-between items-center mb-3">
           <View>
-            <Text className="text-amber-500 text-[10px] font-black uppercase tracking-[3px]">{t('special_admin')}</Text>
-            <Text className="text-3xl font-black text-white">{t('admin_management')}</Text>
+            <Text className="text-amber-500 text-[9px] font-black uppercase tracking-[3px]">{t('special_admin')}</Text>
+            <Text className="text-2xl font-black text-white">{t('admin_management')}</Text>
+          </View>
+          <View className="flex-row items-center gap-x-2">
+            {/* Add Admin */}
+            <TouchableOpacity
+              onPress={() => { setIsEditing(false); setFormData({name:'', username:'', password:'', phoneNumber:''}); setIsModalVisible(true); }}
+              className="flex-row items-center bg-amber-500 px-3 py-2 rounded-xl gap-x-1.5"
+            >
+              <Ionicons name="shield-checkmark" size={15} color="#0f172a" />
+              <Text className="text-slate-900 font-black text-[10px] uppercase">{t('add_admin')}</Text>
+            </TouchableOpacity>
+            {/* Language Toggle */}
+            <TouchableOpacity
+              onPress={toggleLanguage}
+              className="flex-row items-center bg-slate-800 px-2.5 py-2 rounded-xl border border-slate-700"
+            >
+              <Ionicons name="globe-outline" size={16} color="#fbbf24" />
+              <Text className="text-white font-black text-[9px] ml-1.5 uppercase">
+                {i18n.language === 'ar' ? 'EN' : 'AR'}
+              </Text>
+            </TouchableOpacity>
+            {/* Logout */}
+            <TouchableOpacity
+              onPress={confirmSignOut}
+              className="p-2 bg-red-500/10 rounded-xl border border-red-500/20"
+            >
+              <Ionicons name="log-out-outline" size={16} color="#ef4444" />
+            </TouchableOpacity>
           </View>
         </View>
-        <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-14 border border-slate-700">
-          <Ionicons name="search" size={20} color="#64748b" />
-          <TextInput 
-            placeholder={t('search_dot')} 
+        <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-12 border border-slate-700">
+          <Ionicons name="search" size={18} color="#64748b" />
+          <TextInput
+            placeholder={t('search_dot')}
             placeholderTextColor="#475569"
             className="flex-1 ml-3 text-white font-bold"
             value={search}
@@ -275,7 +284,7 @@ export default function AdminManagement() {
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={20} color="#64748b" />
+              <Ionicons name="close-circle" size={18} color="#64748b" />
             </TouchableOpacity>
           )}
         </View>
@@ -365,16 +374,6 @@ export default function AdminManagement() {
             )
           }
         />
-
-        <View className="absolute bottom-6 left-6 right-6">
-          <TouchableOpacity 
-            onPress={() => { setIsEditing(false); setFormData({name:'', username:'', password:'', phoneNumber:''}); setIsModalVisible(true); }}
-            className="bg-slate-900 h-16 rounded-[24px] flex-row justify-center items-center shadow-2xl"
-          >
-            <View className="bg-amber-500 rounded-full p-1 mr-3"><Ionicons name="shield-checkmark" size={18} color="#0f172a" /></View>
-            <Text className="text-white font-black text-base uppercase">{t('add_admin')}</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* --- DETAIL MODAL --- */}
@@ -431,12 +430,12 @@ export default function AdminManagement() {
           </TouchableOpacity>
       </Modal>
 
-      {/* --- FORM MODAL --- */}
+      {/* --- add, edit MODAL --- */}
       <Modal visible={isModalVisible} animationType="slide" transparent={true}>
           <View className="flex-1 justify-end bg-black/60">
             <View 
               className="bg-slate-900 rounded-t-[45px] p-8 border-t-2 border-amber-500/30"
-              style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 }}
+              style={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 16 : 32 + insets.bottom }}
             >
               <View className="w-12 h-1 bg-slate-700 rounded-full self-center mb-6" />
               <Text className="text-amber-500 font-black text-[10px] uppercase tracking-[3px] mb-2">{isEditing ? t('access_level_edit') : t('access_level_create')}</Text>

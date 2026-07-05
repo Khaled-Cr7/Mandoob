@@ -252,6 +252,7 @@ router.post('/', async (req, res) => {
       data: {
         type: 'ADDED',
         modelName: name,
+        newValue: cleanPrice.toString(),
         userId: Number(userId),
       }
     });
