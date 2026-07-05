@@ -145,7 +145,8 @@ export default function AdminPhoneManagement() {
 
   const openAddModal = () => {
     setIsEditing(false);
-    setFormData({ id: '', name: '', brandId: availableBrands[0]?.id || null, price: '' });
+    // Force brandId to start as null instead of pre-selecting the first brand
+    setFormData({ id: '', name: '', brandId: null, price: '' });
     setIsModalVisible(true);
   };
 
@@ -158,27 +159,57 @@ export default function AdminPhoneManagement() {
 
   const handleSave = async () => {
     const { id, name, price, brandId } = formData;
-    if (!id.trim() || !name.trim() || !price || !brandId) {
-      Alert.alert(t('error'), t('fill_all_fields'));
+    
+    // 1. Strict verification: Ensure all fields are filled AND a brand is explicitly selected
+    if (!id.trim() || !name.trim() || !price || brandId === null) {
+      Alert.alert(t('error'), t('fill_all_fields') || 'Please select a brand and fill all fields.');
       return;
     }
+    
     const numericPrice = parseFloat(price);
     if (isNaN(numericPrice) || numericPrice <= 0) {
       Alert.alert(t('error'), t('invalid_price_msg'));
       return;
     }
+    
     try {
       const method = isEditing ? 'PUT' : 'POST';
       const endpoint = isEditing ? `${API_URL}/phones/${id}` : `${API_URL}/phones`;
       const response = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, id: id.trim().toUpperCase(), name: name.trim(), price: numericPrice, userId: Number(userId) })
+        body: JSON.stringify({ 
+          ...formData, 
+          id: id.trim().toUpperCase(), 
+          name: name.trim(), 
+          price: numericPrice, 
+          userId: Number(userId) 
+        })
       });
+      
       if (response.ok) {
-        setIsModalVisible(false);
         fetchPhones();
-        Alert.alert(t('success'), isEditing ? t('updated_msg') : t('added_msg'));
+        
+        if (isEditing) {
+          // If editing an existing device, close the modal normally
+          setIsModalVisible(false);
+          Alert.alert(t('success'), t('updated_msg'));
+        } else {
+          // If adding a new entry, keep modal open and reset fields after clicking OK
+          Alert.alert(
+            t('success'), 
+            t('added_msg'),
+            [
+              {
+                text: t('ok') || 'OK',
+                onPress: () => {
+                  // Clear out everything so the admin can immediately type the next phone
+                  setFormData({ id: '', name: '', brandId: null, price: '' });
+                }
+              }
+            ]
+          );
+        }
       } else {
         const err = await response.json();
         Alert.alert(t('error'), err.message || t('action_failed'));
@@ -349,17 +380,19 @@ export default function AdminPhoneManagement() {
           <View className="w-[1px] h-5 bg-slate-700 mx-2" />
 
           {/* Scrollable brands */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }}>
-            {availableBrands.map((brand) => (
-              <TouchableOpacity
-                key={brand.id}
-                onPress={() => toggleBrand(brand.id)}
-                className={`px-4 py-1.5 rounded-xl mr-2 border-2 ${selectedBrands.includes(brand.id) ? 'bg-amber-500 border-amber-400' : 'bg-transparent border-slate-700'}`}
-              >
-                <Text className={`font-black text-[10px] ${selectedBrands.includes(brand.id) ? 'text-slate-900' : 'text-slate-500'}`}>{brand.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <View className={`rounded-xl p-1 ${formData.brandId === null ? 'border border-red-500/30 bg-red-500/5' : ''}`}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-1">
+              {availableBrands.map((brand) => (
+                <TouchableOpacity
+                  key={brand.id}
+                  onPress={() => toggleBrand(brand.id)}
+                  className={`px-4 py-1.5 rounded-xl mr-2 border-2 ${selectedBrands.includes(brand.id) ? 'bg-amber-500 border-amber-400' : 'bg-transparent border-slate-700'}`}
+                >
+                  <Text className={`font-black text-[10px] ${selectedBrands.includes(brand.id) ? 'text-slate-900' : 'text-slate-500'}`}>{brand.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
         </View>
 
         {/* ROW 3: Search */}
@@ -368,6 +401,7 @@ export default function AdminPhoneManagement() {
           <TextInput
             placeholder={t('search_dot')}
             placeholderTextColor="#475569"
+            style={{ includeFontPadding: false, textAlignVertical: 'center' }}
             className="flex-1 ml-3 text-white font-bold"
             value={search}
             onChangeText={setSearch}

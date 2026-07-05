@@ -207,7 +207,7 @@ export default function DeviceSecureManagement() {
       </View>
 
       {/* BODY */}
-      <View className="flex-1 bg-slate-50 rounded-t-[45px]">
+      <View className="flex-1 bg-slate-50 rounded-t-[36px]">
         <View className="px-8 py-6 flex-row justify-between items-center">
           <Text className="text-xs font-black text-slate-400 uppercase tracking-[2px]">
             {activeTab === 'PENDING' ? t('awaiting_codes') : activeTab === 'ACTIVE' ? t('authorized_hardware') : t('blacklisted')}
