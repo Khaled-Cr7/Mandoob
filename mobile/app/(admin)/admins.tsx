@@ -184,19 +184,38 @@ export default function AdminManagement() {
             ...formData, 
             role: 'ADMIN', 
             username: formData.username.toLowerCase().trim(),
-            phoneNumber: formData.phoneNumber.trim() // 🛡️ Added trim here
+            phoneNumber: formData.phoneNumber.trim()
         })
       });
 
       const result = await res.json(); 
 
       if (res.ok) {
+        fetchAdmins(true);
+        
+        if (isEditing) {
+          // Close modal if modifying an existing admin profile
           setIsModalVisible(false);
-          fetchAdmins(true);
-          // Optional: Alert.alert(t('success'), t('admin_saved'));
+          Alert.alert(t('success'), t('updated_msg') || 'Updated successfully.');
+        } else {
+          // Keep modal open if adding a new administrator entry
+          Alert.alert(
+            t('success'), 
+            t('added_msg') || 'Admin added successfully.',
+            [
+              {
+                text: t('ok') || 'OK',
+                onPress: () => {
+                  // Wipe form tracking data clean for successive additions
+                  setFormData({ name: '', username: '', password: '', phoneNumber: '' });
+                }
+              }
+            ]
+          );
+        }
       } else {
-          const serverMessage = result.message || t('action_failed');
-          Alert.alert(t('system_error'), serverMessage);
+        const serverMessage = result.message || t('action_failed');
+        Alert.alert(t('system_error'), serverMessage);
       }
     } catch (e) {
       Alert.alert(t('error'), t('connection_error'));
@@ -239,21 +258,18 @@ export default function AdminManagement() {
 
   return (
     <View className="flex-1 bg-slate-900">
-      <View className="pt-14 px-5 pb-3 bg-slate-900">
-        <View className="flex-row justify-between items-center mb-3">
+
+      {/* --- CONSOLE HEADER --- */}
+      <View className="pt-14 px-5 pb-2 bg-slate-900">
+        
+        {/* ROW 1: Title + Action Controls */}
+        <View className="flex-row justify-between items-center mb-2">
           <View>
             <Text className="text-amber-500 text-[9px] font-black uppercase tracking-[3px]">{t('special_admin')}</Text>
             <Text className="text-2xl font-black text-white">{t('admin_management')}</Text>
           </View>
+          
           <View className="flex-row items-center gap-x-2">
-            {/* Add Admin */}
-            <TouchableOpacity
-              onPress={() => { setIsEditing(false); setFormData({name:'', username:'', password:'', phoneNumber:''}); setIsModalVisible(true); }}
-              className="flex-row items-center bg-amber-500 px-3 py-2 rounded-xl gap-x-1.5"
-            >
-              <Ionicons name="shield-checkmark" size={15} color="#0f172a" />
-              <Text className="text-slate-900 font-black text-[10px] uppercase">{t('add_admin')}</Text>
-            </TouchableOpacity>
             {/* Language Toggle */}
             <TouchableOpacity
               onPress={toggleLanguage}
@@ -264,6 +280,7 @@ export default function AdminManagement() {
                 {i18n.language === 'ar' ? 'EN' : 'AR'}
               </Text>
             </TouchableOpacity>
+            
             {/* Logout */}
             <TouchableOpacity
               onPress={confirmSignOut}
@@ -273,11 +290,33 @@ export default function AdminManagement() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ROW 2: Add Admin Button + Dynamic Admin Count */}
+        <View className="flex-row justify-between items-center bg-slate-800/40 p-1 rounded-xl border-l-4 border-amber-500 mb-2">
+          {/* Add Admin Button */}
+          <TouchableOpacity
+            onPress={() => { setIsEditing(false); setFormData({name:'', username:'', password:'', phoneNumber:''}); setIsModalVisible(true); }}
+            className="flex-row items-center bg-amber-500 px-2.5 py-1 rounded-lg gap-x-1"
+          >
+            <Ionicons name="shield-checkmark" size={11} color="#0f172a" />
+            <Text className="text-slate-900 font-black text-[9px] uppercase">{t('add_admin')}</Text>
+          </TouchableOpacity>
+
+          {/* Active Admin List Counter */}
+          <View className="bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+            <Text className="text-amber-500 font-black text-[9px] uppercase tracking-wider">
+              {t('number_of_admins') || t('admins')}: {admins.length}
+            </Text>
+          </View>
+        </View>
+
+        {/* ROW 3: Micro Search Bar (Aligned with exact dimensions) */}
         <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-12 border border-slate-700">
           <Ionicons name="search" size={18} color="#64748b" />
           <TextInput
             placeholder={t('search_dot')}
             placeholderTextColor="#475569"
+            style={{ includeFontPadding: false, textAlignVertical: 'center' }}
             className="flex-1 ml-3 text-white font-bold"
             value={search}
             onChangeText={setSearch}
@@ -290,7 +329,7 @@ export default function AdminManagement() {
         </View>
       </View>
 
-      <View className="flex-1 bg-slate-50 rounded-t-[45px] shadow-2xl">
+      <View className="flex-1 bg-slate-50 rounded-t-[36px] shadow-2xl">
         <View className="px-8 py-6">
           <Text className="text-xs font-black text-slate-400 uppercase tracking-[2px]">{t('active_admins')}</Text>
         </View>

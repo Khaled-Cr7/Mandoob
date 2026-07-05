@@ -9,9 +9,6 @@ export async function sendBroadcastNotification(log: any, excludeUserId?: number
       pushToken: { not: null },
       status: 'ACTIVE',
       NOT: excludeUserId ? { userId: excludeUserId } : undefined
-    },
-    include: {
-      user: { select: { language: true } }
     }
   });
 
@@ -20,22 +17,14 @@ export async function sendBroadcastNotification(log: any, excludeUserId?: number
   for (const device of devices) {
     if (!device.pushToken || !Expo.isExpoPushToken(device.pushToken)) continue;
 
-    const lang = device.user.language || 'en';
-    const isArabic = lang === 'ar';
-
-    let title = isArabic ? "تحديث" : "Update";
+    const title = "Update";
     let body = "";
 
-    // Strictly using the types from your original code
+    // Handle payload generation purely in English
     if (log.type === 'PRICE_UPDATE') {
-      body = isArabic 
-        ? `تحديث السعر: ${log.modelName} أصبح ${log.newValue} ر.س`
-        : `Price Update: ${log.modelName} is now ${log.newValue} SAR`;
+      body = `New Price: ${log.modelName} = ${log.newValue} SAR`;
     } else if (log.type === 'ADDED') {
-      const price = log.newValue ? (isArabic ? `${log.newValue} ر.س` : `${log.newValue} SAR`) : '';
-      body = isArabic 
-        ? `هاتف جديد: ${log.modelName}${price ? ` - ${price}` : ''}` 
-        : `New Phone: ${log.modelName}${price ? ` - ${price}` : ''}`;
+      body = `New Model: ${log.modelName} = ${log.newValue} SAR`;
     }
 
     if (body) {

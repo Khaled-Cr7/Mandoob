@@ -27,15 +27,12 @@ export default function NotificationListScreen() {
     if (item.message && !item.type) return item.message;
 
     switch (item.type) {
-      case 'PRICE_UPDATE':
-        return t('notif_price_change', { 
-          model: item.modelName, 
-          new: item.newPrice 
-        });
-      case 'ADDED':
-        return item.newPrice
-          ? t('notif_added_price', { model: item.modelName, price: item.newPrice })
-          : t('notif_added', { model: item.modelName });
+    case 'PRICE_UPDATE':
+      return `New Price: ${item.modelName} = ${item.newPrice} SAR`;
+      
+    case 'ADDED':
+      return `New Model: ${item.modelName} = ${item.newPrice} SAR`;
+      
       default:
         return item.message || "";
     }

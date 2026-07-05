@@ -255,25 +255,43 @@ export default function PersonnelManagement() {
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing ? `${API_URL}/admin/users/${currentId}` : `${API_URL}/admin/users`;
 
-    // Create a copy of the data and lowercase the username
     const normalizedData = {
       ...formData,
       name: formData.name.trim(),
       username: formData.username.toLowerCase().trim(),
       phoneNumber: formData.phoneNumber.trim()
-
     };
 
     try {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(normalizedData) // Send normalizedData instead of formData
+        body: JSON.stringify(normalizedData)
       });
       
       if (res.ok) {
-        setIsModalVisible(false);
         fetchUsers(true);
+        
+        if (isEditing) {
+          // If editing, close modal immediately
+          setIsModalVisible(false);
+          Alert.alert(t('success'), t('updated_msg') || 'Updated successfully.');
+        } else {
+          // If adding, keep modal open and reset fields when they tap OK
+          Alert.alert(
+            t('success'), 
+            t('added_msg') || 'Personnel enrolled successfully.',
+            [
+              {
+                text: t('ok') || 'OK',
+                onPress: () => {
+                  // Clear the form fields instantly for the next entry
+                  setFormData({ name: '', username: '', password: '', phoneNumber: '' });
+                }
+              }
+            ]
+          );
+        }
       } else {
         const errorData = await res.json();
         Alert.alert(t('system_error'), errorData.message || t('action_failed'));
@@ -321,24 +339,17 @@ export default function PersonnelManagement() {
   return (
     <View className="flex-1 bg-slate-900">
 
-      
-      
       {/* --- CONSOLE HEADER --- */}
-      <View className="pt-14 px-5 pb-3 bg-slate-900">
-        <View className="flex-row justify-between items-center mb-3">
+      <View className="pt-14 px-5 pb-2 bg-slate-900">
+        
+        {/* ROW 1: Title + Action Controls */}
+        <View className="flex-row justify-between items-center mb-2">
           <View>
             <Text className="text-amber-500 text-[9px] font-black uppercase tracking-[3px]">{t('system_admin')}</Text>
             <Text className="text-2xl font-black text-white">{t('personnel')}</Text>
           </View>
+          
           <View className="flex-row items-center gap-x-2">
-            {/* Add Personnel */}
-            <TouchableOpacity
-              onPress={handleOpenAdd}
-              className="flex-row items-center bg-amber-500 px-3 py-2 rounded-xl gap-x-1.5"
-            >
-              <Ionicons name="person-add" size={15} color="#0f172a" />
-              <Text className="text-slate-900 font-black text-[10px] uppercase">{t('add_personnel')}</Text>
-            </TouchableOpacity>
             {/* Language Toggle */}
             <TouchableOpacity
               onPress={toggleLanguage}
@@ -349,6 +360,7 @@ export default function PersonnelManagement() {
                 {i18n.language === 'ar' ? 'EN' : 'AR'}
               </Text>
             </TouchableOpacity>
+            
             {/* Logout */}
             <TouchableOpacity
               onPress={confirmSignOut}
@@ -358,12 +370,33 @@ export default function PersonnelManagement() {
             </TouchableOpacity>
           </View>
         </View>
-        {/* Search */}
+
+        {/* ROW 2: Add Personnel Button + Dynamic User Count */}
+        <View className="flex-row justify-between items-center bg-slate-800/40 p-1 rounded-xl border-l-4 border-amber-500 mb-2">
+          {/* Add Personnel Button */}
+          <TouchableOpacity
+            onPress={handleOpenAdd}
+            className="flex-row items-center bg-amber-500 px-2.5 py-1 rounded-lg gap-x-1"
+          >
+            <Ionicons name="person-add" size={11} color="#0f172a" />
+            <Text className="text-slate-900 font-black text-[9px] uppercase">{t('add_personnel')}</Text>
+          </TouchableOpacity>
+
+          {/* Active List Counter */}
+          <View className="bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+            <Text className="text-amber-500 font-black text-[9px] uppercase tracking-wider">
+              {t('number_of_users')}: {users.length}
+            </Text>
+          </View>
+        </View>
+
+        {/* ROW 3: Micro Search Bar (Locked height & center text layout alignment) */}
         <View className="flex-row items-center bg-slate-800 rounded-2xl px-4 h-12 border border-slate-700">
           <Ionicons name="search" size={18} color="#64748b" />
           <TextInput
             placeholder={t('search_dot')}
             placeholderTextColor="#475569"
+            style={{ includeFontPadding: false, textAlignVertical: 'center' }}
             className="flex-1 ml-3 text-white font-bold"
             value={search}
             onChangeText={setSearch}
@@ -377,7 +410,7 @@ export default function PersonnelManagement() {
       </View>
 
       {/* --- STAFF DATA TERMINAL --- */}
-      <View className="flex-1 bg-slate-50 rounded-t-[45px] shadow-2xl border-t border-slate-200">
+      <View className="flex-1 bg-slate-50 rounded-t-[36px] shadow-2xl border-t border-slate-200">
         <View className="px-8 py-6">
           <Text className="text-xs font-black text-slate-400 uppercase tracking-[2px]">{t('active_personnel')}</Text>
         </View>
