@@ -152,16 +152,28 @@ router.post('/changes/:id/publish', async (req, res) => {
   const { id } = req.params;
   const { userId } = req.body;
 
+
   try {
     const result = await prisma.$transaction(async (tx) => {
       const log = await tx.systemChange.findUnique({ where: { id: Number(id) } });
       if (!log || log.isPublished) throw new Error("Log not found or already published");
+
+      
+      let brandStr = "";
+      const targetPhone = await tx.phone.findFirst({
+        where: { name: log.modelName }, // Or use log.phoneId if your schema tracks it
+        include: { brand: true }
+      });
+      if (targetPhone?.brand) {
+        brandStr = targetPhone.brand.name;
+      }
 
       // 1. Create the persistent record for the in-app notification list
       await tx.notification.create({
         data: { 
           type: log.type,
           modelName: log.modelName,
+          brandName: brandStr,
           oldPrice: log.oldValue,
           newPrice: log.newValue
         }
