@@ -33,6 +33,7 @@ router.get('/:userId', async (req, res) => {
       id: n.id,
       type: n.type,           // Added
       modelName: n.modelName, // Added
+      brandName: n.brandName, // Added
       oldPrice: n.oldPrice,   // Added
       newPrice: n.newPrice,   // Added
       createdAt: n.createdAt,

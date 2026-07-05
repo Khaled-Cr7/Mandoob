@@ -99,6 +99,7 @@ model Notification {
   id        Int        @id @default(autoincrement())
   type      ChangeType @default(ADDED)
   modelName String
+  brandName String?
   oldPrice  String?
   newPrice  String?
   createdAt DateTime   @default(now())

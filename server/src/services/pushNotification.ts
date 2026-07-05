@@ -12,6 +12,22 @@ export async function sendBroadcastNotification(log: any, excludeUserId?: number
     }
   });
 
+  let brandName = "";
+  if (log.brandId) {
+    try {
+      const brandRecord = await prisma.brand.findUnique({
+        where: { id: Number(log.brandId) }
+      });
+      // If found, add a space after it so it separates cleanly from the model name
+      if (brandRecord) {
+        brandName = `${brandRecord.name} `; 
+      }
+    } catch (e) {
+      console.error("❌ Failed to fetch brand name for push notification:", e);
+    }
+  }
+
+
   const messages: ExpoPushMessage[] = [];
 
   for (const device of devices) {
@@ -22,9 +38,9 @@ export async function sendBroadcastNotification(log: any, excludeUserId?: number
 
     // Handle payload generation purely in English
     if (log.type === 'PRICE_UPDATE') {
-      body = `New Price:\n${log.brand} ${log.modelName} = ${log.newValue} SAR`;
+      body = `New Price:\n${brandName}${log.modelName} = ${log.newValue} SAR`;
     } else if (log.type === 'ADDED') {
-      body = `New Model:\n${log.brand} ${log.modelName} = ${log.newValue} SAR`;
+      body = `New Model:\n${brandName}${log.modelName} = ${log.newValue} SAR`;
     }
 
     if (body) {
