@@ -380,7 +380,6 @@ export default function AdminPhoneManagement() {
           <View className="w-[1px] h-5 bg-slate-700 mx-2" />
 
           {/* Scrollable brands */}
-          <View className={`rounded-xl p-1 ${formData.brandId === null ? 'border border-red-500/30 bg-red-500/5' : ''}`}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-1">
               {availableBrands.map((brand) => (
                 <TouchableOpacity
@@ -392,7 +391,6 @@ export default function AdminPhoneManagement() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
         </View>
 
         {/* ROW 3: Search */}
@@ -576,17 +574,17 @@ export default function AdminPhoneManagement() {
               </View>
               <View>
                 <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('manufacturer')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-1">
-                  {availableBrands.map(b => (
-                    <TouchableOpacity
-                      key={b.id}
-                      onPress={() => setFormData({...formData, brandId: b.id})}
-                      className={`mr-2 px-5 py-2.5 rounded-xl border-2 ${formData.brandId === b.id ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-slate-700'}`}
-                    >
-                      <Text className={`font-black text-[10px] ${formData.brandId === b.id ? 'text-slate-900' : 'text-slate-400'}`}>{b.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-1">
+                    {availableBrands.map(b => (
+                      <TouchableOpacity
+                        key={b.id}
+                        onPress={() => setFormData({...formData, brandId: b.id})}
+                        className={`mr-2 px-5 py-2.5 rounded-xl border-2 ${formData.brandId === b.id ? 'bg-amber-500 border-amber-400' : 'bg-slate-800 border-slate-700'}`}
+                      >
+                        <Text className={`font-black text-[10px] ${formData.brandId === b.id ? 'text-slate-900' : 'text-slate-400'}`}>{b.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
               </View>
               <View>
                 <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('valuation_sar')}</Text>
