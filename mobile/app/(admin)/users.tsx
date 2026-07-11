@@ -121,32 +121,6 @@ export default function PersonnelManagement() {
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const generateRandomPassword = () => {
-    const sets = {
-      upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-      lower: "abcdefghijklmnopqrstuvwxyz",
-      nums: "0123456789",
-      special: "!@#$%^&*"
-    };
-
-    // 1. Force at least one of each required type immediately
-    let password = "";
-    password += sets.upper[Math.floor(Math.random() * sets.upper.length)];
-    password += sets.lower[Math.floor(Math.random() * sets.lower.length)];
-    password += sets.nums[Math.floor(Math.random() * sets.nums.length)];
-    password += sets.special[Math.floor(Math.random() * sets.special.length)];
-
-    // 2. Fill the remaining 6 characters with anything from the full pool
-    const allChars = sets.upper + sets.lower + sets.nums + sets.special;
-    for (let i = 0; i < 6; i++) {
-      password += allChars[Math.floor(Math.random() * allChars.length)];
-    }
-
-    // 3. Shuffle the string so the required chars aren't always at the start
-    const shuffledPassword = password.split('').sort(() => 0.5 - Math.random()).join('');
-
-    setFormData({ ...formData, password: shuffledPassword });
-  };
 
   const validateUser = () => {
     const { name, username, password, phoneNumber } = formData;
@@ -165,10 +139,10 @@ export default function PersonnelManagement() {
     }
 
     // 2. Password Check
-    if (!isEditing || (isEditing && password.length > 0)) {
-      const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
+     if (!isEditing || (isEditing && password.length > 0)) {
+      const passRegex = /^[a-zA-Z0-9]{4,8}$/;
       if (!passRegex.test(password)) {
-        Alert.alert(t('weak_password'), t('weak_password_msg'));
+        Alert.alert(t('error'), t('password_rules_msg'));
         return false;
       }
     }
@@ -594,7 +568,7 @@ export default function PersonnelManagement() {
                 {/* Password + Eye + Shuffle */}
                 <View>
                   <Text className="text-slate-500 text-[9px] font-black uppercase ml-1 mb-2">{t('password')}</Text>
-                  <View className="flex-row items-center bg-slate-800 rounded-2xl border border-slate-700 pr-2">
+                   <View className="flex-row items-center bg-slate-800 rounded-2xl border border-slate-700 pr-2">
                     <TextInput 
                       placeholder="••••••••" placeholderTextColor="#475569" 
                       secureTextEntry={!showPassword} value={formData.password}
@@ -603,9 +577,6 @@ export default function PersonnelManagement() {
                     />
                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2">
                       <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#64748b" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={generateRandomPassword} className="p-2 bg-slate-700 rounded-xl">
-                      <Ionicons name="shuffle" size={16} color="#fbbf24"/>
                     </TouchableOpacity>
                   </View>
                 </View>

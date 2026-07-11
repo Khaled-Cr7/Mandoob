@@ -96,7 +96,7 @@ router.put('/:id', async (req, res) => {
     let { password, avatar } = req.body; // use 'let' so we can trim
 
     const updateData: any = {};
-    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
+    const passRegex = /^[a-zA-Z0-9]{4,8}$/;
 
     // 1. Validate Password
     if (password && password.trim() !== "") {

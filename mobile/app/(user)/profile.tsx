@@ -179,10 +179,10 @@ export default function ProfileScreen() {
 
   const handleUpdatePassword = async () => {
     const { newPassword, confirmPassword } = passwordData;
-    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
+    const passRegex = /^[a-zA-Z0-9]{4,8}$/;
 
     if (!passRegex.test(newPassword)) {
-     Alert.alert(t('weak_password'), t('weak_password_msg'));
+      Alert.alert(t('error'), t('password_rules_msg'));
       return;
     }
     if (newPassword !== confirmPassword) {

@@ -151,10 +151,10 @@ export default function AdminManagement() {
     }
 
     // 2. Password Check
-    if (!isEditing || (isEditing && password.length > 0)) {
-      const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
+     if (!isEditing || (isEditing && password.length > 0)) {
+      const passRegex = /^[a-zA-Z0-9]{4,8}$/;
       if (!passRegex.test(password)) {
-        Alert.alert(t('weak_password'), t('weak_password_msg'));
+        Alert.alert(t('error'), t('password_rules_msg'));
         return false;
       }
     }
@@ -233,18 +233,6 @@ export default function AdminManagement() {
     }
   };
 
-  const generateRandomPassword = () => {
-    const sets = {
-      upper: "ABCDEFGH", lower: "abcdefgh", nums: "123456", special: "!@#$"
-    };
-    let password = sets.upper[Math.floor(Math.random() * 8)] + 
-                   sets.lower[Math.floor(Math.random() * 8)] + 
-                   sets.nums[Math.floor(Math.random() * 6)] + 
-                   sets.special[Math.floor(Math.random() * 4)];
-    const all = "ABCDEFGHabcdefgh1234567890!@#$%^&*";
-    for(let i=0; i<6; i++) password += all[Math.floor(Math.random() * all.length)];
-    setFormData({ ...formData, password: password.split('').sort(()=>0.5-Math.random()).join('') });
-  };
 
   if (!hasAccess) {
     return (
@@ -485,7 +473,6 @@ export default function AdminManagement() {
                 <View className="flex-row items-center bg-slate-800 rounded-2xl border border-slate-700 pr-2">
                     <TextInput placeholder={t('password')} placeholderTextColor="#475569" secureTextEntry={!showPassword} value={formData.password} onChangeText={(t)=>setFormData({...formData, password:t})} className="flex-1 text-white p-4 font-bold" />
                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2"><Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#64748b" /></TouchableOpacity>
-                    <TouchableOpacity onPress={generateRandomPassword} className="p-2 bg-slate-700 rounded-xl"><Ionicons name="shuffle" size={16} color="#fbbf24"/></TouchableOpacity>
                 </View>
                 <TextInput placeholder="05XXXXXXXX" placeholderTextColor="#475569" keyboardType="numeric" maxLength={10} value={formData.phoneNumber} onChangeText={(t)=>setFormData({...formData, phoneNumber:t.replace(/[^0-9]/g, '')})} className="bg-slate-800 text-white p-4 rounded-2xl border border-slate-700 font-bold" />
               </View>
