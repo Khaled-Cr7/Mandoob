@@ -1,8 +1,5 @@
-- add the price of the new added phone in the notification
-- the brand filter (all) stays still when you scroll in brands.
-- handle navigation buttons in all pages
-- fix all the pages to use space better
--  make the brand null when trying to add a new phone.
-- after the phone is added don't leave the modal.
+- password only letters and numbers and 4-8 char.
+- zoom in and out for the phone list
+- check the word inventory in all the app
 - when changing language leave the phone list same as it is.
 - add export to pdf and excel.

@@ -83,6 +83,7 @@
   "enter_unique_username": "Enter Unique Username",
   "weak_password": "Weak Password",
   "weak_password_msg": "Must be 8+ chars with Upper, Lower, Number, and a Special Character.",
+  "password_rules_msg": "Password must be 4-8 characters, letters and numbers only",
   "required": "Required",
   "enter_phone": "Please enter a Phone Number.",
   "invalid_input": "Invalid Input",

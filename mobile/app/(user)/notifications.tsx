@@ -23,12 +23,15 @@ export default function NotificationListScreen() {
     // If it's an old notification that still has a hardcoded string
     if (item.message && !item.type) return item.message;
 
-   switch (item.type) {
-    case 'PRICE_UPDATE':
-      return `New Price:\n${item.brand || ''} ${item.modelName} = ${item.newPrice} SAR`;
-      
-    case 'ADDED':
-      return `New Model:\n${item.brand || ''} ${item.modelName} = ${item.newPrice} SAR`;
+   // Formats a clean spacing string if the brand name is present
+    const resolvedBrand = item.brandName ? `${item.brandName} ` : '';
+
+    switch (item.type) {
+      case 'PRICE_UPDATE':
+        return `New Price:\n${resolvedBrand}${item.modelName} = ${item.newPrice} SAR`;
+        
+      case 'ADDED':
+        return `New Model:\n${resolvedBrand}${item.modelName} = ${item.newPrice} SAR`
 
       default:
         return item.message || "";

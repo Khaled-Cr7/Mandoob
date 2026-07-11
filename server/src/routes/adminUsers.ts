@@ -46,7 +46,7 @@ router.post('/', async (req, res) => {
 
     const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
     const phoneRegex = /^05\d{8}$/;
-    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
+    const passRegex = /^[a-zA-Z0-9]{4,8}$/;
 
     if (!name || name.length > 50) return res.status(400).json({ message: "Invalid Name" });
     if (!usernameRegex.test(username)) return res.status(400).json({ message: "Invalid Username format" });
@@ -80,7 +80,7 @@ router.put('/:id', async (req, res) => {
 
     const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
     const phoneRegex = /^05\d{8}$/;
-    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+={}[\]|:;<>,./])[A-Za-z\d@$!%*?&#^()_\-+={}[\]|:;<>,./]{8,}$/;
+    const passRegex = /^[a-zA-Z0-9]{4,8}$/;
 
     if (name) {
       if (name.trim().length > 50) return res.status(400).json({ message: "Name too long" });
